@@ -4,4 +4,7 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Screen/DebugOverlayTest.unity
+    guid: 61b21ba9fc0d7c04eb28a72045df7d38
