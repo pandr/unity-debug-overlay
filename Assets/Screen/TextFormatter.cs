@@ -196,8 +196,9 @@ public unsafe struct ArgList3<T0, T1, T2> : IArgList
 /// </summary>
 public static unsafe class StringFormatter
 {
-    public static void __Write<T>(ref char[] dst, int destIdx, string format, T argList) where T : IArgList
+    public static int __Write<T>(ref char[] dst, int destIdx, string format, T argList) where T : IArgList
     {
+        int written = 0;
         fixed (char* p = format, d = &dst[0])
         {
             var dest = d + destIdx;
@@ -207,7 +208,22 @@ public static unsafe class StringFormatter
             while (*src > 0 && dest < end)
             {
                 // Simplified parsing of {<argnum>[,<width>][:<format>]} where <format> is one of either 0000.00 or ####.## type formatters.
-                if (*src == '{')
+                if(*src == '{' && *(src+1) == '{')
+                {
+                    *dest++ = *src++;
+                    src++;
+                }
+                else if (*src == '}')
+                {
+                    if (*(src + 1) == '}')
+                    {
+                        *dest++ = *src++;
+                        src++;
+                    }
+                    else
+                        throw new FormatException("You must escape curly braces");
+                }
+                else if (*src == '{')
                 {
                     src++;
 
@@ -244,8 +260,13 @@ public static unsafe class StringFormatter
                     }
 
                     // Skip to }
-                    while (*src != '\0' && *src++ != '}')
-                        ;
+                    while (*src != '\0' && *src != '}')
+                        src++;
+
+                    if (*src == '\0')
+                        throw new FormatException("Invalid format. Missing '}'?");
+                    else
+                        src++;
 
                     if (argNum < 0 || argNum >= argList.Count)
                         throw new IndexOutOfRangeException(argNum.ToString());
@@ -257,7 +278,9 @@ public static unsafe class StringFormatter
                     *dest++ = *src++;
                 }
             }
+            written = (int)(dest - d + destIdx);
         }
+        return written;
     }
     static int ReadNum(ref char* p)
     {

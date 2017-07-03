@@ -10,12 +10,12 @@ public class OverlayTest : MonoBehaviour
     void Update()
     {
         DebugOverlay.Write(2, 2, "Hello, {0,-5} world!", Time.frameCount%100<50 ? "Happy" : "Evil");
-        DebugOverlay.Write(2, 3, "FrameNo: {0,7}", Time.frameCount);
-        DebugOverlay.Write(2, 4, "Time:    {0,7:0000.00}", Time.time);
-        DebugOverlay.Write(2, 5, "FPS:     {0,7:###.##}", 1.0f / Time.deltaTime);
-        DebugOverlay.Write(2, 6, "MonoHeap:{0,7} kb", (int)(UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong() / 1024));
+        DebugOverlay.Write("FrameNo: {0,7}", Time.frameCount);
+        DebugOverlay.Write("Time:    {0,7:0000.00}", Time.time);
+        DebugOverlay.Write("FPS:     {0,7:###.##}", 1.0f / Time.deltaTime);
+        DebugOverlay.Write("MonoHeap:{0,7} kb", (int)(UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong() / 1024));
         DebugOverlay.DrawRect(20, 5.2f, 1.0f/Time.deltaTime*0.1f, 0.6f, Color.green);
-        DebugOverlay.Write(2, 7, "PlayerPos: {0,6:000.0} {1,6:000.0} {2,6:000.0}",
+        DebugOverlay.Write("PlayerPos: {0,6:000.0} {1,6:000.0} {2,6:000.0}",
             transform.position.x,
             transform.position.y,
             transform.position.z);

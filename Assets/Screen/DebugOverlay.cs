@@ -55,17 +55,61 @@ public class DebugOverlay : MonoBehaviour
     {
         instance._Write(x, y, format, new ArgList0());
     }
+    public static void Write(string format)
+    {
+        int x, y;
+        instance.RelPos(Position.Below, out x, out y);
+        instance._Write(x, y, format, new ArgList0());
+    }
+
     public static void Write<T>(int x, int y, string format, T arg)
     {
+        instance._Write(x, y, format, new ArgList1<T>(arg));
+    }
+
+    public static void Write<T>(string format, T arg)
+    {
+        int x, y;
+        instance.RelPos(Position.Below, out x, out y);
         instance._Write(x, y, format, new ArgList1<T>(arg));
     }
     public static void Write<T0, T1>(int x, int y, string format, T0 arg0, T1 arg1)
     {
         instance._Write(x, y, format, new ArgList2<T0, T1>(arg0, arg1));
     }
+    public static void Write<T0, T1>(string format, T0 arg0, T1 arg1)
+    {
+        int x, y;
+        instance.RelPos(Position.Below, out x, out y);
+        instance._Write(x, y, format, new ArgList2<T0, T1>(arg0, arg1));
+    }
     public static void Write<T0, T1, T2>(int x, int y, string format, T0 arg0, T1 arg1, T2 arg2)
     {
         instance._Write(x, y, format, new ArgList3<T0, T1, T2>(arg0, arg1, arg2));
+    }
+    public static void Write<T0, T1, T2>(string format, T0 arg0, T1 arg1, T2 arg2)
+    {
+        int x, y;
+        instance.RelPos(Position.Below, out x, out y);
+        instance._Write(x, y, format, new ArgList3<T0, T1, T2>(arg0, arg1, arg2));
+    }
+
+    public enum Position
+    {
+        Below,
+        Above,
+        Right,
+    }
+
+    void RelPos(Position pos, out int x, out int y)
+    {
+        switch(pos)
+        {
+            default:
+            case Position.Below: x = m_LastWriteX; y = m_LastWriteY + 1; return;
+            case Position.Above: x = m_LastWriteX; y = m_LastWriteY - 1; return;
+            case Position.Right: x = m_LastEndX; y = m_LastEndY; return;
+       }
     }
 
     // Draw a stacked histogram from numSets of data. Data must contain numSets of interleaved, non-negative datapoints.
@@ -159,7 +203,8 @@ public class DebugOverlay : MonoBehaviour
         int i = width * y + x;
         if (i < 0 || i >= m_CharBuffer.Length)
             return;
-        StringFormatter.__Write<T>(ref m_CharBuffer, i, format, argList);
+        var num = StringFormatter.__Write<T>(ref m_CharBuffer, i, format, argList);
+        Wrote(x, y, num);
     }
 
     int AllocExtras(int num)
@@ -249,6 +294,14 @@ public class DebugOverlay : MonoBehaviour
         _Clear();
     }
 
+    void Wrote(int x, int y, int num)
+    {
+        m_LastWriteX = x;
+        m_LastWriteY = y;
+        m_LastEndX = (x + num) % width;
+        m_LastEndY = (x + y * width + num) / width;
+    }
+
     public void DeInit()
     {
         if (m_InstanceBuffer != null)
@@ -263,6 +316,10 @@ public class DebugOverlay : MonoBehaviour
     }
 
     char[] m_CharBuffer;
+    int m_LastWriteX;
+    int m_LastWriteY;
+    int m_LastEndX;
+    int m_LastEndY;
 
     struct ExtraData
     {
