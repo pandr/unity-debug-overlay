@@ -24,10 +24,7 @@ Shader "Instanced/GlyphShaderProc" {
 			#include "UnityCG.cginc"
 
 			sampler2D _MainTex;
-			float sdx;
-			float sdy;
-			float tdx;
-			float tdy;
+			float4 scales; // glyph scale in world (x,y) and on texture (z,w)
 
 			struct instanceData
 			{
@@ -47,10 +44,10 @@ Shader "Instanced/GlyphShaderProc" {
 
 			v2f vert(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
 			{
-				// We just draw a bunch of vertices but want to pretend
-				// we are drawing two-triangle quads:
-				int instID = vid / 6;
-				int vertID =  (vid % 6);
+				// We just draw a bunch of vertices but want to pretend to
+				// be drawing two-triangle quads. Build inst/vert id for this:
+				int instID = vid / 6.0;
+				int vertID = vid - instID * 6;
 				
 				// Generates (0,0) (1,0) (1,1) (1,1) (1,0) (0,0) from vertID
 				float4 v_pos = saturate(float4(2 - abs(vertID - 2), 2 - abs(vertID - 3), 0, 0));
@@ -61,11 +58,11 @@ Shader "Instanced/GlyphShaderProc" {
 				float4 color = positionBuffer[instID].color;
 
 				// Generate uv
-				float2 uv = (pos_uv.zw + v_pos.xy) * float2(tdx, tdy);
+				float2 uv = (pos_uv.zw + v_pos.xy) * scales.zw;
 				uv.y = 1.0 - uv.y;
 
 				// Generate position
-				float2 p = (v_pos*scale + pos_uv.xy)*float2(sdx, sdy);
+				float2 p = (v_pos*scale + pos_uv.xy) * scales.xy;
 				p = float2(-1, -1) + p * 2.0;
 
 				v2f o;
@@ -77,11 +74,12 @@ Shader "Instanced/GlyphShaderProc" {
 
 			fixed4 frag(v2f i) : SV_Target
 			{
-				fixed4 albedo = fixed4(1,1,1,1);
+				float4 albedo = float4(1,1,1,1);
+				// TODO fix up this hack
 				if (length(i.uv_MainTex) > 0)
 				{
 					albedo = tex2D(_MainTex, i.uv_MainTex);
-					albedo = lerp(albedo, fixed4(1, 1, 1, 1), i.color.a);
+					albedo = lerp(albedo, float4(1, 1, 1, 1), i.color.a);
 				}
 				fixed4 output = albedo * float4(i.color.rgb, 1);
 				return output;

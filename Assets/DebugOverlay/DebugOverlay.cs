@@ -20,7 +20,7 @@ public class DebugOverlay : MonoBehaviour
     void OnDisable() { DeInit(); }
 
     public static DebugOverlay instance;
-    
+
     public void Init()
     {
         instance = this;
@@ -80,13 +80,13 @@ public class DebugOverlay : MonoBehaviour
 
     void RelPos(Position pos, out int x, out int y)
     {
-        switch(pos)
+        switch (pos)
         {
             default:
             case Position.Below: x = m_LastWriteX; y = m_LastWriteY + 1; return;
             case Position.Above: x = m_LastWriteX; y = m_LastWriteY - 1; return;
             case Position.Right: x = m_LastEndX; y = m_LastEndY; return;
-       }
+        }
     }
 
     // Draw a stacked histogram from numSets of data. Data must contain numSets of interleaved, non-negative datapoints.
@@ -111,7 +111,7 @@ public class DebugOverlay : MonoBehaviour
     {
         if (data.Length % numSets != 0)
             throw new System.ArgumentException("Length of data must be a multiple of numSets");
-        if(color.Length != numSets)
+        if (color.Length != numSets)
             throw new System.ArgumentException("Length of colors must be numSets");
 
         var numSamples = data.Length / numSets;
@@ -208,14 +208,15 @@ public class DebugOverlay : MonoBehaviour
                 m_InstanceBuffer.Release();
 
             m_QuadCount = requiredInstanceCount;
-            m_InstanceBuffer = new ComputeBuffer(m_QuadCount, 16+16+16);
+            m_InstanceBuffer = new ComputeBuffer(m_QuadCount, 16 + 16 + 16);
             m_DataBuffer = new InstanceData[m_QuadCount];
 
             instanceMaterialProc.SetBuffer("positionBuffer", m_InstanceBuffer);
-            instanceMaterialProc.SetFloat("sdx", 1.0f / width);
-            instanceMaterialProc.SetFloat("sdy", 1.0f / height);
-            instanceMaterialProc.SetFloat("tdx", (float)cellWidth / instanceMaterialProc.mainTexture.width);
-            instanceMaterialProc.SetFloat("tdy", (float)cellHeight / instanceMaterialProc.mainTexture.height);
+            instanceMaterialProc.SetVector("scales", new Vector4(
+                1.0f / width,
+                1.0f / height,
+                (float)cellWidth / instanceMaterialProc.mainTexture.width,
+                (float)cellHeight / instanceMaterialProc.mainTexture.height));
         }
 
         // Scan out content of screen buffer
@@ -223,7 +224,7 @@ public class DebugOverlay : MonoBehaviour
         int screenWidth = width;
         var v4 = new Vector4();
         var size = new Vector4(1, 1, 0, 0);
-        var color = new Color(2, 1.0f,0 , 0.0f);
+        var color = new Color(2, 1.0f, 0, 0.0f);
         for (int i = 0, c = m_CharBuffer.Length; i < c; i++)
         {
             var ch = m_CharBuffer[i];
@@ -240,14 +241,14 @@ public class DebugOverlay : MonoBehaviour
         }
 
         // Scan out extras
-        for(int i = 0, c = m_NumExtrasUsed; i<c; i++)
+        for (int i = 0, c = m_NumExtrasUsed; i < c; i++)
         {
             var r = m_Extras[i];
             var posUV = new Vector4(r.rect.x, r.rect.y, 0, 0);
-            if(r.character != '\0')
+            if (r.character != '\0')
             {
                 posUV.z = (r.character - 32) % charCols;
-                posUV.w = (r.character-32) / charCols;
+                posUV.w = (r.character - 32) / charCols;
             }
             m_DataBuffer[m_usedQuads].positionAndUV = posUV;
             m_DataBuffer[m_usedQuads].size = new Vector4(r.rect.z, r.rect.w, 0, 0);
@@ -262,7 +263,7 @@ public class DebugOverlay : MonoBehaviour
         instanceMaterialProc.SetPass(0);
         Graphics.DrawProcedural(MeshTopology.Triangles, m_usedQuads * 6, 1);
 
-        if(width*height != m_CharBuffer.Length)
+        if (width * height != m_CharBuffer.Length)
             Resize(width, height);
 
         _Clear();
