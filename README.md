@@ -27,3 +27,4 @@ You can write stuff like
 
 and it will look like
 
+![Pretty picture](https://user-images.githubusercontent.com/4175246/27818480-0fcb0176-6096-11e7-9962-4371342402f2.png)
