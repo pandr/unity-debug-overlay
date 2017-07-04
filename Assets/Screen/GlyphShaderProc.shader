@@ -1,4 +1,4 @@
-Shader "Instanced/GlyphShader" {
+Shader "Instanced/GlyphShaderProc" {
 	Properties{
 		_MainTex("Albedo (RGB)", 2D) = "white" {}
 	}
@@ -45,28 +45,30 @@ Shader "Instanced/GlyphShader" {
 				float4 color : TEXCOORD3;
 			};
 
-			v2f vert(appdata_full v, uint instanceID : SV_InstanceID)
+			v2f vert(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
 			{
-				float4 data = positionBuffer[instanceID].position;
+				// We just draw a bunch of vertices but want to pretend
+				// we are drawing two-triangle quads:
+				int instID = vid / 6;
+				int vertID =  (vid % 6);
+				
+				// Generates (0,0) (1,0) (1,1) (1,1) (1,0) (0,0) from vertID
+				float4 v_pos = saturate(float4(2 - abs(vertID - 2), 2 - abs(vertID - 3), 0, 0));
 
-				float2 uv = (data.zw + v.texcoord) * float2(tdx, tdy);
+				// Read instance data
+				float4 pos_uv = positionBuffer[instID].position;
+				float2 scale = positionBuffer[instID].size.xy;
+				float4 color = positionBuffer[instID].color;
+
+				// Generate uv
+				float2 uv = (pos_uv.zw + v_pos.xy) * float2(tdx, tdy);
 				uv.y = 1.0 - uv.y;
-				float2 pos = data.xy;
-				float2 scale = positionBuffer[instanceID].size.xy;
-				float4 color = positionBuffer[instanceID].color;
-				/*
-				if (pos.x < 0)
-				{
-					pos.xy = -pos.xy;
-					scale.xy = -data.zw;
-					uv = v.texcoord;
-				}
-				*/
 
+				// Generate position
+				float2 p = (v_pos*scale + pos_uv.xy)*float2(sdx, sdy);
+				p = float2(-1, -1) + p * 2.0;
 
 				v2f o;
-				float2 p = (v.vertex.xy*scale + pos)*float2(sdx, sdy);
-				p = float2(-1, -1) + p*2.0;
 				o.pos = float4(p.xy, 1, 1);
 				o.uv_MainTex = uv;
 				o.color = color;

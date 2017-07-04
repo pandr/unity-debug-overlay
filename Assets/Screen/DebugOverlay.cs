@@ -3,14 +3,12 @@ using System.Collections;
 
 public class DebugOverlay : MonoBehaviour
 {
-    public Camera cam;
-
     [Header("Overlay size")]
     public int width = 80;
     public int height = 25;
 
     [Header("Font material info")]
-    public Material instanceMaterial;
+    public Material instanceMaterialProc;
     public int charCols = 30;
     public int charRows = 16;
     public int cellWidth = 32;
@@ -26,27 +24,6 @@ public class DebugOverlay : MonoBehaviour
     public void Init()
     {
         instance = this;
-
-        m_InstanceMesh = new Mesh();
-
-        m_InstanceMesh.vertices = new Vector3[] {
-            new Vector3(0, 0, 0),
-            new Vector3(1, 0, 0),
-            new Vector3(1, 1, 0),
-            new Vector3(0, 1, 0),
-        };
-        m_InstanceMesh.triangles = new int[] {
-            0,1,2,
-            0,2,3
-        };
-        m_InstanceMesh.uv = new Vector2[] {
-            new Vector2(0, 0),
-            new Vector2(1, 0),
-            new Vector2(1, 1),
-            new Vector2(0, 1),
-        };
-
-        m_ArgsBuffer = new ComputeBuffer(1, m_Args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
 
         Resize(width, height);
     }
@@ -225,24 +202,24 @@ public class DebugOverlay : MonoBehaviour
         // Resize or recreate buffer if needed. Not we use extras.Length which is high-water mark for extras
         // to avoid constant recreation.
         var requiredInstanceCount = width * height + m_Extras.Length;
-        if (m_InstanceBuffer == null || requiredInstanceCount != m_InstanceCount)
+        if (m_InstanceBuffer == null || requiredInstanceCount != m_QuadCount)
         {
             if (m_InstanceBuffer != null)
                 m_InstanceBuffer.Release();
 
-            m_InstanceCount = requiredInstanceCount;
-            m_InstanceBuffer = new ComputeBuffer(m_InstanceCount, 16+16+16);
-            m_DataBuffer = new InstanceData[m_InstanceCount];
+            m_QuadCount = requiredInstanceCount;
+            m_InstanceBuffer = new ComputeBuffer(m_QuadCount, 16+16+16);
+            m_DataBuffer = new InstanceData[m_QuadCount];
 
-            instanceMaterial.SetBuffer("positionBuffer", m_InstanceBuffer);
-            instanceMaterial.SetFloat("sdx", 1.0f / width);
-            instanceMaterial.SetFloat("sdy", 1.0f / height);
-            instanceMaterial.SetFloat("tdx", (float)cellWidth / instanceMaterial.mainTexture.width);
-            instanceMaterial.SetFloat("tdy", (float)cellHeight / instanceMaterial.mainTexture.height);
+            instanceMaterialProc.SetBuffer("positionBuffer", m_InstanceBuffer);
+            instanceMaterialProc.SetFloat("sdx", 1.0f / width);
+            instanceMaterialProc.SetFloat("sdy", 1.0f / height);
+            instanceMaterialProc.SetFloat("tdx", (float)cellWidth / instanceMaterialProc.mainTexture.width);
+            instanceMaterialProc.SetFloat("tdy", (float)cellHeight / instanceMaterialProc.mainTexture.height);
         }
 
         // Scan out content of screen buffer
-        int usedInstances = 0;
+        m_usedQuads = 0;
         int screenWidth = width;
         var v4 = new Vector4();
         var size = new Vector4(1, 1, 0, 0);
@@ -256,10 +233,10 @@ public class DebugOverlay : MonoBehaviour
             v4.y = i / screenWidth; // pos
             v4.z = (ch - 32) % charCols; // uv
             v4.w = (ch - 32) / charCols; // uv
-            m_DataBuffer[usedInstances].positionAndUV = v4;
-            m_DataBuffer[usedInstances].size = size;
-            m_DataBuffer[usedInstances].color = color;
-            usedInstances++;
+            m_DataBuffer[m_usedQuads].positionAndUV = v4;
+            m_DataBuffer[m_usedQuads].size = size;
+            m_DataBuffer[m_usedQuads].color = color;
+            m_usedQuads++;
         }
 
         // Scan out extras
@@ -272,21 +249,18 @@ public class DebugOverlay : MonoBehaviour
                 posUV.z = (r.character - 32) % charCols;
                 posUV.w = (r.character-32) / charCols;
             }
-            m_DataBuffer[usedInstances].positionAndUV = posUV;
-            m_DataBuffer[usedInstances].size = new Vector4(r.rect.z, r.rect.w, 0, 0);
-            m_DataBuffer[usedInstances].color = r.color;
-            usedInstances++;
+            m_DataBuffer[m_usedQuads].positionAndUV = posUV;
+            m_DataBuffer[m_usedQuads].size = new Vector4(r.rect.z, r.rect.w, 0, 0);
+            m_DataBuffer[m_usedQuads].color = r.color;
+            m_usedQuads++;
         }
-        m_InstanceBuffer.SetData(m_DataBuffer, 0, 0, usedInstances);
+        m_InstanceBuffer.SetData(m_DataBuffer, 0, 0, m_usedQuads);
+    }
 
-        // Update indirect args
-        uint numIndices = (m_InstanceMesh != null) ? (uint)m_InstanceMesh.GetIndexCount(0) : 0;
-        m_Args[0] = numIndices;
-        m_Args[1] = (uint)usedInstances;
-        m_ArgsBuffer.SetData(m_Args);
-
-        // Issue draw
-        Graphics.DrawMeshInstancedIndirect(m_InstanceMesh, 0, instanceMaterial, new Bounds(Vector3.zero, new Vector3(100.0f, 100.0f, 100.0f)), m_ArgsBuffer, 0, null, UnityEngine.Rendering.ShadowCastingMode.Off, false, 0, cam);
+    void OnPostRender()
+    {
+        instanceMaterialProc.SetPass(0);
+        Graphics.DrawProcedural(MeshTopology.Triangles, m_usedQuads * 6, 1);
 
         if(width*height != m_CharBuffer.Length)
             Resize(width, height);
@@ -307,10 +281,6 @@ public class DebugOverlay : MonoBehaviour
         if (m_InstanceBuffer != null)
             m_InstanceBuffer.Release();
         m_InstanceBuffer = null;
-
-        if (m_ArgsBuffer != null)
-            m_ArgsBuffer.Release();
-        m_ArgsBuffer = null;
 
         m_DataBuffer = null;
     }
@@ -338,12 +308,10 @@ public class DebugOverlay : MonoBehaviour
     int m_NumExtrasUsed = 0;
     ExtraData[] m_Extras = new ExtraData[0];
 
-    int m_InstanceCount = -1;
-    Mesh m_InstanceMesh;
+    int m_QuadCount = -1;
 
     ComputeBuffer m_InstanceBuffer;
     InstanceData[] m_DataBuffer;
-    ComputeBuffer m_ArgsBuffer;
-    uint[] m_Args = new uint[5] { 0, 0, 0, 0, 0 };
+    int m_usedQuads = 0;
 
 }
