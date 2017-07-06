@@ -101,10 +101,12 @@ public class DebugOverlay : MonoBehaviour
 
         var dataLength = data.Length;
         var numSamples = dataLength / numSets;
-        var idx = AllocQuads(numSets * numSamples);
+
+        var idx = AllocQuads(dataLength);
 
         float maxData = float.MinValue;
 
+        // Find tallest stack of values
         for (var i = 0; i < numSamples; i++)
         {
             float sum = 0;
@@ -112,15 +114,15 @@ public class DebugOverlay : MonoBehaviour
             for (var j = 0; j < numSets; j++)
                 sum += data[i * numSets + j];
 
-            if (sum > maxData) maxData = sum;
+            if (sum > maxData)
+                maxData = sum;
         }
 
         if (maxData > maxRange)
             maxRange = maxData;
-        float minRange = 0;
 
         float dx = w / numSamples;
-        float scale = maxRange > minRange ? h / (maxRange - minRange) : 1.0f;
+        float scale = maxRange > 0 ? h / maxRange : 1.0f;
 
         QuadData qd;
         qd.character = '\0';
@@ -190,7 +192,7 @@ public class DebugOverlay : MonoBehaviour
 
     public void Tick()
     {
-        // Resize or recreate buffer if needed. Not we use m_QuadDatas.Length which is high-water mark for quads
+        // Recreate buffer if needed. Note, we use m_QuadDatas.Length which is high-water mark for quads
         // to avoid constant recreation.
         var requiredInstanceCount = m_QuadDatas.Length;
         if (m_InstanceBuffer == null || requiredInstanceCount != m_QuadCount)
@@ -203,11 +205,6 @@ public class DebugOverlay : MonoBehaviour
             m_DataBuffer = new InstanceData[m_QuadCount];
 
             instanceMaterialProc.SetBuffer("positionBuffer", m_InstanceBuffer);
-            instanceMaterialProc.SetVector("scales", new Vector4(
-                1.0f / width,
-                1.0f / height,
-                (float)cellWidth / instanceMaterialProc.mainTexture.width,
-                (float)cellHeight / instanceMaterialProc.mainTexture.height));
         }
 
         // Scan out quads
@@ -227,6 +224,12 @@ public class DebugOverlay : MonoBehaviour
             m_DataBuffer[i].color = col;
         }
         m_InstanceBuffer.SetData(m_DataBuffer, 0, 0, m_NumQuadsUsed);
+
+        instanceMaterialProc.SetVector("scales", new Vector4(
+            1.0f / width,
+            1.0f / height,
+            (float)cellWidth / instanceMaterialProc.mainTexture.width,
+            (float)cellHeight / instanceMaterialProc.mainTexture.height));
     }
 
     void OnPostRender()
