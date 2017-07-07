@@ -26,39 +26,32 @@ public class DebugOverlay : MonoBehaviour
         instance = this;
     }
 
+    public static void SetColor(Color col)
+    {
+        instance.m_CurrentColor = col;
+    }
+
+    public static void SetOrigin(float x, float y)
+    {
+        instance.m_OriginX = x;
+        instance.m_OriginY = y;
+    }
+
     public static void Write(float x, float y, string format)
     {
         instance._Write(x, y, format, new ArgList0());
     }
-    public static void Write(string format)
-    {
-        instance._Write(format, new ArgList0());
-    }
-
     public static void Write<T>(float x, float y, string format, T arg)
     {
         instance._Write(x, y, format, new ArgList1<T>(arg));
-    }
-
-    public static void Write<T>(string format, T arg)
-    {
-        instance._Write(format, new ArgList1<T>(arg));
     }
     public static void Write<T0, T1>(float x, float y, string format, T0 arg0, T1 arg1)
     {
         instance._Write(x, y, format, new ArgList2<T0, T1>(arg0, arg1));
     }
-    public static void Write<T0, T1>(string format, T0 arg0, T1 arg1)
-    {
-        instance._Write(format, new ArgList2<T0, T1>(arg0, arg1));
-    }
     public static void Write<T0, T1, T2>(float x, float y, string format, T0 arg0, T1 arg1, T2 arg2)
     {
         instance._Write(x, y, format, new ArgList3<T0, T1, T2>(arg0, arg1, arg2));
-    }
-    public static void Write<T0, T1, T2>(string format, T0 arg0, T1 arg1, T2 arg2)
-    {
-        instance._Write(format, new ArgList3<T0, T1, T2>(arg0, arg1, arg2));
     }
 
     // Draw a stacked histogram from numSets of data. Data must contain numSets of interleaved, non-negative datapoints.
@@ -79,15 +72,15 @@ public class DebugOverlay : MonoBehaviour
         instance._DrawRect(x, y, w, h, col);
     }
 
-    void _DrawText(float x, float y, ref char[] text, int length, Color color)
+    void _DrawText(float x, float y, ref char[] text, int length)
     {
         var idx = AllocQuads(length);
         QuadData qd;
-        qd.color = color;
+        qd.color = m_CurrentColor;
         for(var i = 0; i < length; i++)
         {
             qd.character = text[i];
-            qd.rect = new Vector4(x + i, y, 1, 1);
+            qd.rect = new Vector4(m_OriginX + x + i, m_OriginY + y, 1, 1);
             m_QuadDatas[idx + i] = qd;
         }        
     }
@@ -139,8 +132,8 @@ public class DebugOverlay : MonoBehaviour
             qd.color.w = c.a;
             float d = data[i];
             float scaledData = d * scale; // now in [0, h]
-            qd.rect.x = x + dx * i;
-            qd.rect.y = y + h - d * scale - stackOffset;
+            qd.rect.x = m_OriginX + x + dx * i;
+            qd.rect.y = m_OriginY + y + h - d * scale - stackOffset;
             qd.rect.z = dx;
             qd.rect.w = d * scale;
             stackOffset += scaledData;
@@ -151,7 +144,7 @@ public class DebugOverlay : MonoBehaviour
     void _DrawRect(float x, float y, float w, float h, Color col)
     {
         QuadData rd;
-        rd.rect = new Vector4(x, y, w, h);
+        rd.rect = new Vector4(m_OriginX + x, m_OriginY + y, w, h);
         rd.color = col;
         var idx = AllocQuads(1);
         rd.character = '\0';
@@ -161,20 +154,14 @@ public class DebugOverlay : MonoBehaviour
     void _Clear()
     {
         m_NumQuadsUsed = 0;
-    }
-
-    void _Write<T>(string format, T argList) where T : IArgList
-    {
-        _Write(m_LastWriteX, m_LastWriteY + 1, format, argList);
+        SetOrigin(0, 0);
     }
 
     char[] _buf = new char[1024];
     void _Write<T>(float x, float y, string format, T argList) where T : IArgList
     {
         var num = StringFormatter.__Write<T>(ref _buf, 0, format, argList);
-        _DrawText(x, y, ref _buf, num, m_CurrentColor);
-        m_LastWriteX = x;
-        m_LastWriteY = y;
+        _DrawText(x, y, ref _buf, num);
     }
 
     int AllocQuads(int num)
@@ -240,12 +227,6 @@ public class DebugOverlay : MonoBehaviour
         _Clear();
     }
 
-    void Wrote(float x, float y)
-    {
-        m_LastWriteX = x;
-        m_LastWriteY = y;
-    }
-
     public void DeInit()
     {
         if (m_InstanceBuffer != null)
@@ -255,9 +236,9 @@ public class DebugOverlay : MonoBehaviour
         m_DataBuffer = null;
     }
 
-    float m_LastWriteX;
-    float m_LastWriteY;
-    Color m_CurrentColor = Color.grey;
+    float m_OriginX;
+    float m_OriginY;
+    Color m_CurrentColor = Color.white;
 
     struct QuadData
     {

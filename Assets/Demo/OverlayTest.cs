@@ -56,23 +56,26 @@ public class OverlayTest : MonoBehaviour
         long ticks = m_StopWatch.ElapsedTicks;
         float frameDurationMs = (ticks - m_LastFrameTicks) * 1000 / (float)m_StopWatchFreq;
         m_LastFrameTicks = ticks;
-        DebugOverlay.Write(2, 2, "Hello, {0,-5} world!", Time.frameCount % 100 < 50 ? "Happy" : "Evil");
-        DebugOverlay.Write("FrameNo: {0,7}", Time.frameCount);
-        DebugOverlay.Write("FPS:     {0,7:###.##}", 1.0f / Time.deltaTime);
-        DebugOverlay.Write("MonoHeap:{0,7} kb", (int)(UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong() / 1024));
-        DebugOverlay.DrawRect(20, 5.2f, 1.0f / Time.deltaTime * 0.1f, 0.6f, Color.green);
-        DebugOverlay.Write("PlayerPos: {0,6:000.0} {1,6:000.0} {2,6:000.0}",
+        DebugOverlay.SetColor(Color.yellow);
+        DebugOverlay.SetOrigin(2, 2);
+        DebugOverlay.Write(0, 0, "Hello, {0,-5} world!", Time.frameCount % 100 < 50 ? "Happy" : "Evil");
+        DebugOverlay.Write(0, 1, "FrameNo: {0,7}", Time.frameCount);
+        DebugOverlay.Write(0, 2, "FPS:     {0,7:###.##}", 1.0f / Time.deltaTime);
+        DebugOverlay.Write(0, 3, "MonoHeap:{0,7} kb", (int)(UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong() / 1024));
+        DebugOverlay.Write(0, 4, "PlayerPos: {0,6:000.0} {1,6:000.0} {2,6:000.0}",
             transform.position.x,
             transform.position.y,
             transform.position.z);
 
         /// Graphing
+        DebugOverlay.SetOrigin(0, 0);
         System.Array.Copy(fpsArray, 1, fpsArray, 0, fpsArray.Length - 1);
         float fps = Time.deltaTime * 1000.0f;
         fpsArray[fpsArray.Length - 1] = frameDurationMs - fps;
         float variance, mean, min, max;
         CalcStatistics(fpsArray, fpsArray.Length, out mean, out variance, out min, out max);
         DebugOverlay.DrawHist(20, 10, 20, 3, fpsArray, Color.blue, max);
+        DebugOverlay.SetColor(Color.red);
         DebugOverlay.Write(20, 14, "{0} ({1} +/- {2})", frameDurationMs-fps, mean, Mathf.Sqrt(variance));
 
         System.Array.Copy(frameTimeArray, 1, frameTimeArray, 0, frameTimeArray.Length - 1);
@@ -81,6 +84,5 @@ public class OverlayTest : MonoBehaviour
         DebugOverlay.DrawHist(20, 15, 20, 3, frameTimeArray, Color.red, max);
         DebugOverlay.DrawRect(20, 18.0f - 3.0f/max*16.6667f, 20, 0.1f, Color.black);
         DebugOverlay.Write(20, 18, "{0} ({1} +/- {2})", frameDurationMs, mean, Mathf.Sqrt(variance));
-
     }
 }
