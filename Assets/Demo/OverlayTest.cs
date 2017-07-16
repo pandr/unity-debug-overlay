@@ -4,12 +4,13 @@ using UnityEngine;
 
 public class OverlayTest : MonoBehaviour
 {
-    float[] fpsArray = new float[100];
+    float[] fpsArray = new float[200];
     float[] frameTimeArray = new float[100];
 
     System.Diagnostics.Stopwatch m_StopWatch;
     long m_StopWatchFreq;
     long m_LastFrameTicks;
+    DebugOverlay m_DebugOverlay;
 
     void Awake()
     {
@@ -18,6 +19,14 @@ public class OverlayTest : MonoBehaviour
         m_StopWatch.Start();
         m_LastFrameTicks = m_StopWatch.ElapsedTicks;
         Debug.Assert(System.Diagnostics.Stopwatch.IsHighResolution);
+        m_DebugOverlay = GetComponent<DebugOverlay>();
+        m_DebugOverlay.Init();
+    }
+
+    void OnDestroy()
+    {
+        m_DebugOverlay.Shutdown();
+        m_DebugOverlay = null;
     }
 
     int dataIndex = 0;
@@ -51,6 +60,7 @@ public class OverlayTest : MonoBehaviour
         variance = sum2 / (count - 1);
     }
 
+    static Color[] colors = new Color[] { Color.red, Color.green };
     void Update()
     {
         long ticks = m_StopWatch.ElapsedTicks;
@@ -69,21 +79,27 @@ public class OverlayTest : MonoBehaviour
 
         /// Graphing
         DebugOverlay.SetOrigin(0, 0);
-        System.Array.Copy(fpsArray, 1, fpsArray, 0, fpsArray.Length - 1);
         float fps = Time.deltaTime * 1000.0f;
-        fpsArray[fpsArray.Length - 1] = frameDurationMs - fps;
+        var idx = (Time.frameCount * 2) % fpsArray.Length; ;
+        fpsArray[idx] = -Mathf.Min(0,frameDurationMs - fps);
+        fpsArray[idx+1] = Mathf.Max(0,frameDurationMs - fps);
         float variance, mean, min, max;
         CalcStatistics(fpsArray, fpsArray.Length, out mean, out variance, out min, out max);
-        DebugOverlay.DrawHist(20, 10, 20, 3, fpsArray, Color.blue, max);
+        DebugOverlay.DrawHist(20, 10, 20, 3, fpsArray, Time.frameCount, colors, 2, max);
         DebugOverlay.SetColor(Color.red);
         DebugOverlay.Write(20, 14, "{0} ({1} +/- {2})", frameDurationMs-fps, mean, Mathf.Sqrt(variance));
 
-        System.Array.Copy(frameTimeArray, 1, frameTimeArray, 0, frameTimeArray.Length - 1);
-        frameTimeArray[frameTimeArray.Length - 1] = frameDurationMs;
+        var idx2 = Time.frameCount % frameTimeArray.Length;
+        frameTimeArray[idx2] = frameDurationMs;
         CalcStatistics(frameTimeArray, frameTimeArray.Length, out mean, out variance, out min, out max);
-        DebugOverlay.DrawHist(20, 15, 20, 3, frameTimeArray, Color.red, max);
+        DebugOverlay.DrawHist(20, 15, 20, 3, frameTimeArray, Time.frameCount, Color.red, max);
         // Draw a 'scale' line
         DebugOverlay.DrawRect(20, 18.0f - 3.0f/max*16.6667f, 20, 0.1f, Color.black);
         DebugOverlay.Write(20, 18, "{0} ({1} +/- {2})", frameDurationMs, mean, Mathf.Sqrt(variance));
+    }
+
+    void LateUpdate()
+    {
+        m_DebugOverlay.TickLateUpdate();
     }
 }

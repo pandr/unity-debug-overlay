@@ -18,16 +18,84 @@ public class DebugOverlay : MonoBehaviour
     [Tooltip("Height in pixels of each glyph")]
     public int cellHeight = 32;
 
-    // MonoBehaviour stuff
-    void Start() { Init(); }
-    void Update() { Tick(); }
-    void OnDisable() { DeInit(); }
-
     public static DebugOverlay instance;
 
     public void Init()
     {
         instance = this;
+    }
+
+
+    public void Shutdown()
+    {
+        if (m_InstanceBuffer != null)
+            m_InstanceBuffer.Release();
+        m_InstanceBuffer = null;
+
+        m_DataBuffer = null;
+
+        instance = null;
+    }
+
+
+    public void AddQuad(float x, float y, float w, float h, char c, Vector4 col)
+    {
+        if (m_NumQuadsUsed >= m_DataBuffer.Length)
+        {
+            // Resize
+            var newBuf = new InstanceData[m_DataBuffer.Length + 128];
+            System.Array.Copy(m_DataBuffer, newBuf, m_DataBuffer.Length);
+            m_DataBuffer = newBuf;
+        }
+
+        if (c != '\0')
+        {
+            m_DataBuffer[m_NumQuadsUsed].positionAndUV.z = (c - 32) % charCols;
+            m_DataBuffer[m_NumQuadsUsed].positionAndUV.w = (c - 32) / charCols;
+            col.w = 0.0f;
+        }
+        else
+        {
+            m_DataBuffer[m_NumQuadsUsed].positionAndUV.z = 0;
+            m_DataBuffer[m_NumQuadsUsed].positionAndUV.w = 0;
+        }
+
+        m_DataBuffer[m_NumQuadsUsed].color = col;
+        m_DataBuffer[m_NumQuadsUsed].positionAndUV.x = x;
+        m_DataBuffer[m_NumQuadsUsed].positionAndUV.y = y;
+        m_DataBuffer[m_NumQuadsUsed].size.x = w;
+        m_DataBuffer[m_NumQuadsUsed].size.y = h;
+        m_DataBuffer[m_NumQuadsUsed].size.z = 0;
+        m_DataBuffer[m_NumQuadsUsed].size.w = 0;
+        m_NumQuadsUsed++;
+    }
+
+    public void TickLateUpdate()
+    {
+        // Recreate buffer if needed.
+        if (m_InstanceBuffer == null || m_InstanceBuffer.count != m_DataBuffer.Length)
+        {
+            if (m_InstanceBuffer != null)
+            {
+                m_InstanceBuffer.Release();
+                m_InstanceBuffer = null;
+            }
+
+            m_InstanceBuffer = new ComputeBuffer(m_DataBuffer.Length, 16 + 16 + 16);
+
+            instanceMaterialProc.SetBuffer("positionBuffer", m_InstanceBuffer);
+        }
+
+        m_InstanceBuffer.SetData(m_DataBuffer, 0, 0, m_NumQuadsUsed);
+        m_NumInstancesUsed = m_NumQuadsUsed;
+
+        instanceMaterialProc.SetVector("scales", new Vector4(
+            1.0f / width,
+            1.0f / height,
+            (float)cellWidth / instanceMaterialProc.mainTexture.width,
+            (float)cellHeight / instanceMaterialProc.mainTexture.height));
+
+        _Clear();
     }
 
     /// <summary>
@@ -36,64 +104,86 @@ public class DebugOverlay : MonoBehaviour
     /// <param name="col"></param>
     public static void SetColor(Color col)
     {
+        if (instance == null)
+            return;
         instance.m_CurrentColor = col;
     }
 
     public static void SetOrigin(float x, float y)
     {
+        if (instance == null)
+            return;
         instance.m_OriginX = x;
         instance.m_OriginY = y;
     }
 
     public static void Write(float x, float y, string format)
     {
+        if (instance == null)
+            return;
         instance._Write(x, y, format, new ArgList0());
     }
     public static void Write<T>(float x, float y, string format, T arg)
     {
+        if (instance == null)
+            return;
         instance._Write(x, y, format, new ArgList1<T>(arg));
+    }
+    public static void Write<T>(Color col, float x, float y, string format, T arg)
+    {
+        if (instance == null)
+            return;
+        Color c = instance.m_CurrentColor;
+        instance.m_CurrentColor = col;
+        instance._Write(x, y, format, new ArgList1<T>(arg));
+        instance.m_CurrentColor = c;
     }
     public static void Write<T0, T1>(float x, float y, string format, T0 arg0, T1 arg1)
     {
+        if (instance == null)
+            return;
         instance._Write(x, y, format, new ArgList2<T0, T1>(arg0, arg1));
     }
     public static void Write<T0, T1, T2>(float x, float y, string format, T0 arg0, T1 arg1, T2 arg2)
     {
+        if (instance == null)
+            return;
         instance._Write(x, y, format, new ArgList3<T0, T1, T2>(arg0, arg1, arg2));
     }
 
     // Draw a stacked histogram from numSets of data. Data must contain numSets of interleaved, non-negative datapoints.
-    public static void DrawHist(float x, float y, float w, float h, float[] data, Color[] color, int numSets, float maxRange = -1.0f)
+    public static void DrawHist(float x, float y, float w, float h, float[] data, int startSample, Color[] color, int numSets, float maxRange = -1.0f)
     {
-        instance._DrawHist(x, y, w, h, data, color, numSets, maxRange);
+        if (instance == null)
+            return;
+        instance._DrawHist(x, y, w, h, data, startSample, color, numSets, maxRange);
     }
 
     static Color[] m_Colors = new Color[1];
-    public static void DrawHist(float x, float y, float w, float h, float[] data, Color color, float maxRange = -1.0f)
+    public static void DrawHist(float x, float y, float w, float h, float[] data, int startSample, Color color, float maxRange = -1.0f)
     {
+        if (instance == null)
+            return;
         m_Colors[0] = color;
-        instance._DrawHist(x, y, w, h, data, m_Colors, 1, maxRange);
+        instance._DrawHist(x, y, w, h, data, startSample, m_Colors, 1, maxRange);
     }
 
     public static void DrawRect(float x, float y, float w, float h, Color col)
     {
+        if (instance == null)
+            return;
         instance._DrawRect(x, y, w, h, col);
     }
 
     void _DrawText(float x, float y, ref char[] text, int length)
     {
-        var idx = AllocQuads(length);
-        QuadData qd;
-        qd.color = m_CurrentColor;
-        for(var i = 0; i < length; i++)
+        for (var i = 0; i < length; i++)
         {
-            qd.character = text[i];
-            qd.rect = new Vector4(m_OriginX + x + i, m_OriginY + y, 1, 1);
-            m_QuadDatas[idx + i] = qd;
-        }        
+            AddQuad(m_OriginX + x + i, m_OriginY + y, 1, 1, text[i], m_CurrentColor);
+        }
     }
 
-    void _DrawHist(float x, float y, float w, float h, float[] data, Color[] color, int numSets, float maxRange = -1.0f)
+    void _DrawHist(float x, float y, float w, float h, float[] data, int startSample, Color[] color, int numSets, float maxRange = -1.0f)
     {
         if (data.Length % numSets != 0)
             throw new System.ArgumentException("Length of data must be a multiple of numSets");
@@ -102,8 +192,6 @@ public class DebugOverlay : MonoBehaviour
 
         var dataLength = data.Length;
         var numSamples = dataLength / numSets;
-
-        var idx = AllocQuads(dataLength);
 
         float maxData = float.MinValue;
 
@@ -125,38 +213,28 @@ public class DebugOverlay : MonoBehaviour
         float dx = w / numSamples;
         float scale = maxRange > 0 ? h / maxRange : 1.0f;
 
-        QuadData qd;
-        qd.character = '\0';
         float stackOffset = 0;
-        for (var i = 0; i < dataLength; i++)
+        for (var i = 0; i < numSamples; i++)
         {
-            var set = i % numSets;
-            if(set == 0)
-                stackOffset = 0;
-            var c = color[set];
-            qd.color.x = c.r;
-            qd.color.y = c.g;
-            qd.color.z = c.b;
-            qd.color.w = c.a;
-            float d = data[i];
-            float scaledData = d * scale; // now in [0, h]
-            qd.rect.x = m_OriginX + x + dx * i;
-            qd.rect.y = m_OriginY + y + h - d * scale - stackOffset;
-            qd.rect.z = dx;
-            qd.rect.w = d * scale;
-            stackOffset += scaledData;
-            m_QuadDatas[idx++] = qd;
+            stackOffset = 0;
+            for (var j = 0; j < numSets; j++)
+            {
+                var c = color[j];
+                float d = data[((i + startSample) % numSamples) * numSets + j];
+                float barHeight = d * scale; // now in [0, h]
+                var pos_x = m_OriginX + x + dx * i;
+                var pos_y = m_OriginY + y + h - barHeight - stackOffset;
+                var width = dx;
+                var height = barHeight;
+                stackOffset += barHeight;
+                AddQuad(pos_x, pos_y, width, height, '\0', new Vector4(c.r, c.g, c.b, c.a));
+            }
         }
     }
 
     void _DrawRect(float x, float y, float w, float h, Color col)
     {
-        QuadData rd;
-        rd.rect = new Vector4(m_OriginX + x, m_OriginY + y, w, h);
-        rd.color = col;
-        var idx = AllocQuads(1);
-        rd.character = '\0';
-        m_QuadDatas[idx] = rd;
+        AddQuad(m_OriginX + x, m_OriginY + y, w, h, '\0', col);
     }
 
     void _Clear()
@@ -172,88 +250,15 @@ public class DebugOverlay : MonoBehaviour
         _DrawText(x, y, ref _buf, num);
     }
 
-    int AllocQuads(int num)
-    {
-        var idx = m_NumQuadsUsed;
-        m_NumQuadsUsed += num;
-        if (m_NumQuadsUsed > m_QuadDatas.Length)
-        {
-            var newRects = new QuadData[m_NumQuadsUsed + 128];
-            System.Array.Copy(m_QuadDatas, newRects, m_QuadDatas.Length);
-            m_QuadDatas = newRects;
-        }
-        return idx;
-    }
-
-    public void Tick()
-    {
-        // Recreate buffer if needed. Note, we use m_QuadDatas.Length which is high-water mark for quads
-        // to avoid constant recreation.
-        var requiredInstanceCount = m_QuadDatas.Length;
-        if (m_InstanceBuffer == null || requiredInstanceCount != m_QuadCount)
-        {
-            if (m_InstanceBuffer != null)
-                m_InstanceBuffer.Release();
-
-            m_QuadCount = requiredInstanceCount;
-            m_InstanceBuffer = new ComputeBuffer(m_QuadCount, 16 + 16 + 16);
-            m_DataBuffer = new InstanceData[m_QuadCount];
-
-            instanceMaterialProc.SetBuffer("positionBuffer", m_InstanceBuffer);
-        }
-
-        // Scan out quads
-        for (int i = 0, c = m_NumQuadsUsed; i < c; i++)
-        {
-            var r = m_QuadDatas[i];
-            var col = r.color;
-            var posUV = new Vector4(r.rect.x, r.rect.y, 0, 0);
-            if (r.character != '\0')
-            {
-                posUV.z = (r.character - 32) % charCols;
-                posUV.w = (r.character - 32) / charCols;
-                col.w = 0.0f;
-            }
-            m_DataBuffer[i].positionAndUV = posUV;
-            m_DataBuffer[i].size = new Vector4(r.rect.z, r.rect.w, 0, 0);
-            m_DataBuffer[i].color = col;
-        }
-        m_InstanceBuffer.SetData(m_DataBuffer, 0, 0, m_NumQuadsUsed);
-
-        instanceMaterialProc.SetVector("scales", new Vector4(
-            1.0f / width,
-            1.0f / height,
-            (float)cellWidth / instanceMaterialProc.mainTexture.width,
-            (float)cellHeight / instanceMaterialProc.mainTexture.height));
-    }
-
     void OnPostRender()
     {
         instanceMaterialProc.SetPass(0);
-        Graphics.DrawProcedural(MeshTopology.Triangles, m_NumQuadsUsed * 6, 1);
-
-        _Clear();
-    }
-
-    public void DeInit()
-    {
-        if (m_InstanceBuffer != null)
-            m_InstanceBuffer.Release();
-        m_InstanceBuffer = null;
-
-        m_DataBuffer = null;
+        Graphics.DrawProcedural(MeshTopology.Triangles, m_NumInstancesUsed * 6, 1);
     }
 
     float m_OriginX;
     float m_OriginY;
     Color m_CurrentColor = Color.white;
-
-    struct QuadData
-    {
-        public Vector4 rect;
-        public Vector4 color;
-        public char character;
-    }
 
     struct InstanceData
     {
@@ -263,11 +268,9 @@ public class DebugOverlay : MonoBehaviour
     }
 
     int m_NumQuadsUsed = 0;
-    QuadData[] m_QuadDatas = new QuadData[0];
-
-    int m_QuadCount = -1;
 
     ComputeBuffer m_InstanceBuffer;
-    InstanceData[] m_DataBuffer;
+    int m_NumInstancesUsed = 0;
+    InstanceData[] m_DataBuffer = new InstanceData[128];
 
 }
