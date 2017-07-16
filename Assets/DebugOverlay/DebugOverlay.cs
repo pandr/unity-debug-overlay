@@ -38,7 +38,7 @@ public class DebugOverlay : MonoBehaviour
     }
 
 
-    public void AddQuad(float x, float y, float w, float h, char c, Vector4 col)
+    public unsafe void AddQuad(float x, float y, float w, float h, char c, Vector4 col)
     {
         if (m_NumQuadsUsed >= m_DataBuffer.Length)
         {
@@ -48,25 +48,29 @@ public class DebugOverlay : MonoBehaviour
             m_DataBuffer = newBuf;
         }
 
-        if (c != '\0')
+        fixed (InstanceData* d = &m_DataBuffer[m_NumQuadsUsed])
         {
-            m_DataBuffer[m_NumQuadsUsed].positionAndUV.z = (c - 32) % charCols;
-            m_DataBuffer[m_NumQuadsUsed].positionAndUV.w = (c - 32) / charCols;
-            col.w = 0.0f;
-        }
-        else
-        {
-            m_DataBuffer[m_NumQuadsUsed].positionAndUV.z = 0;
-            m_DataBuffer[m_NumQuadsUsed].positionAndUV.w = 0;
+            if (c != '\0')
+            {
+                d->positionAndUV.z = (c - 32) % charCols;
+                d->positionAndUV.w = (c - 32) / charCols;
+                col.w = 0.0f;
+            }
+            else
+            {
+                d->positionAndUV.z = 0;
+                d->positionAndUV.w = 0;
+            }
+    
+            d->color = col;
+            d->positionAndUV.x = x;
+            d->positionAndUV.y = y;
+            d->size.x = w;
+            d->size.y = h;
+            d->size.z = 0;
+            d->size.w = 0;
         }
 
-        m_DataBuffer[m_NumQuadsUsed].color = col;
-        m_DataBuffer[m_NumQuadsUsed].positionAndUV.x = x;
-        m_DataBuffer[m_NumQuadsUsed].positionAndUV.y = y;
-        m_DataBuffer[m_NumQuadsUsed].size.x = w;
-        m_DataBuffer[m_NumQuadsUsed].size.y = h;
-        m_DataBuffer[m_NumQuadsUsed].size.z = 0;
-        m_DataBuffer[m_NumQuadsUsed].size.w = 0;
         m_NumQuadsUsed++;
     }
 
