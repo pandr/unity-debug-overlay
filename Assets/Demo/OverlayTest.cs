@@ -89,13 +89,21 @@ public class OverlayTest : MonoBehaviour
         DebugOverlay.SetColor(Color.red);
         DebugOverlay.Write(20, 14, "{0} ({1} +/- {2})", frameDurationMs-fps, mean, Mathf.Sqrt(variance));
 
+        DebugOverlay.DrawGraph(45, 10, 40, 3, fpsArray, Time.frameCount, colors, 2, max);
+
         var idx2 = Time.frameCount % frameTimeArray.Length;
         frameTimeArray[idx2] = frameDurationMs;
         CalcStatistics(frameTimeArray, frameTimeArray.Length, out mean, out variance, out min, out max);
         DebugOverlay.DrawHist(20, 15, 20, 3, frameTimeArray, Time.frameCount, Color.red, max);
         // Draw a 'scale' line
-        DebugOverlay.DrawRect(20, 18.0f - 3.0f/max*16.6667f, 20, 0.1f, Color.black);
+        float scale = 18.0f - 3.0f / max * 16.6667f;
+        DebugOverlay.DrawLine(20, scale, 40, scale, Color.black);
         DebugOverlay.Write(20, 18, "{0} ({1} +/- {2})", frameDurationMs, mean, Mathf.Sqrt(variance));
+
+        DebugOverlay.DrawGraph(45, 15, 40, 3, frameTimeArray, Time.frameCount, Color.red, max);
+
+        for (var i = 0; i < 30; i++)
+            DebugOverlay.DrawLine(20, 20, 20 + Mathf.Sin(i) * 10, 20 + Mathf.Cos(i) * 10, Color.black);
     }
 
     void LateUpdate()

@@ -1,10 +1,11 @@
 Shader "Instanced/LineShaderProc" {
-	Properties{
+	Properties
+	{
 	}
-	SubShader{
-
-		Pass{
-
+	SubShader
+	{
+		Pass
+		{
 			Tags{ "Queue" = "Transparent" "RenderType" = "Transparent" }
 
 			ZWrite off
@@ -57,8 +58,8 @@ Shader "Instanced/LineShaderProc" {
 
 				// Generate position
 				float2 dir = pos.zw - pos.xy;
-				float2 pdir = float2(-dir.y, dir.x);
-				float2 p = pos.xy + dir*v_pos.y + pdir * v_pos.x;// (v_pos*scale + pos_uv.xy) * scales.xy;
+				float2 pdir = normalize(float2(-dir.y, dir.x));
+				float2 p = (pos.xy + dir*v_pos.y)*scales.xy + pdir * 3.0 * v_pos.x * scales.zw;
 				p = float2(-1, -1) + p * 2.0;
 
 				v2f o;
@@ -74,7 +75,7 @@ Shader "Instanced/LineShaderProc" {
 				return output;
 			}
 
-		ENDCG
-	}
+			ENDCG
+		}
 	}
 }

@@ -22,82 +22,66 @@ public class DebugOverlay : MonoBehaviour
 
     public void Init()
     {
+        m_LineMaterial = new Material(Shader.Find("Instanced/LineShaderProc"));
         instance = this;
     }
 
 
     public void Shutdown()
     {
-        if (m_InstanceBuffer != null)
-            m_InstanceBuffer.Release();
-        m_InstanceBuffer = null;
+        if (m_QuadInstanceBuffer != null)
+            m_QuadInstanceBuffer.Release();
+        m_QuadInstanceBuffer = null;
+        m_QuadInstanceData = null;
 
-        m_DataBuffer = null;
+        if (m_LineInstanceBuffer != null)
+            m_LineInstanceBuffer.Release();
+        m_LineInstanceBuffer = null;
+        m_LineInstanceData = null;
 
         instance = null;
     }
 
-
-    public unsafe void AddQuad(float x, float y, float w, float h, char c, Vector4 col)
-    {
-        if (m_NumQuadsUsed >= m_DataBuffer.Length)
-        {
-            // Resize
-            var newBuf = new InstanceData[m_DataBuffer.Length + 128];
-            System.Array.Copy(m_DataBuffer, newBuf, m_DataBuffer.Length);
-            m_DataBuffer = newBuf;
-        }
-
-        fixed (InstanceData* d = &m_DataBuffer[m_NumQuadsUsed])
-        {
-            if (c != '\0')
-            {
-                d->positionAndUV.z = (c - 32) % charCols;
-                d->positionAndUV.w = (c - 32) / charCols;
-                col.w = 0.0f;
-            }
-            else
-            {
-                d->positionAndUV.z = 0;
-                d->positionAndUV.w = 0;
-            }
-    
-            d->color = col;
-            d->positionAndUV.x = x;
-            d->positionAndUV.y = y;
-            d->size.x = w;
-            d->size.y = h;
-            d->size.z = 0;
-            d->size.w = 0;
-        }
-
-        m_NumQuadsUsed++;
-    }
-
     public void TickLateUpdate()
     {
-        // Recreate buffer if needed.
-        if (m_InstanceBuffer == null || m_InstanceBuffer.count != m_DataBuffer.Length)
+        // Recreate compute buffer if needed.
+        if (m_QuadInstanceBuffer == null || m_QuadInstanceBuffer.count != m_QuadInstanceData.Length)
         {
-            if (m_InstanceBuffer != null)
+            if (m_QuadInstanceBuffer != null)
             {
-                m_InstanceBuffer.Release();
-                m_InstanceBuffer = null;
+                m_QuadInstanceBuffer.Release();
+                m_QuadInstanceBuffer = null;
             }
 
-            m_InstanceBuffer = new ComputeBuffer(m_DataBuffer.Length, 16 + 16 + 16);
-
-            instanceMaterialProc.SetBuffer("positionBuffer", m_InstanceBuffer);
+            m_QuadInstanceBuffer = new ComputeBuffer(m_QuadInstanceData.Length, 16 + 16 + 16);
+            instanceMaterialProc.SetBuffer("positionBuffer", m_QuadInstanceBuffer);
         }
 
-        m_InstanceBuffer.SetData(m_DataBuffer, 0, 0, m_NumQuadsUsed);
-        m_NumInstancesUsed = m_NumQuadsUsed;
+        if (m_LineInstanceBuffer == null || m_LineInstanceBuffer.count != m_LineInstanceData.Length)
+        {
+            if (m_LineInstanceBuffer != null)
+            {
+                m_LineInstanceBuffer.Release();
+                m_LineInstanceBuffer = null;
+            }
+
+            m_LineInstanceBuffer = new ComputeBuffer(m_LineInstanceData.Length, 16 + 16);
+            m_LineMaterial.SetBuffer("positionBuffer", m_LineInstanceBuffer);
+        }
+
+        m_QuadInstanceBuffer.SetData(m_QuadInstanceData, 0, 0, m_NumQuadsUsed);
+        m_NumQuadsToDraw = m_NumQuadsUsed;
+
+        m_LineInstanceBuffer.SetData(m_LineInstanceData, 0, 0, m_NumLinesUsed);
+        m_NumLinesToDraw = m_NumLinesUsed;
 
         instanceMaterialProc.SetVector("scales", new Vector4(
             1.0f / width,
             1.0f / height,
             (float)cellWidth / instanceMaterialProc.mainTexture.width,
             (float)cellHeight / instanceMaterialProc.mainTexture.height));
+
+        m_LineMaterial.SetVector("scales", new Vector4(1.0f / width, 1.0f / height, 1.0f / 1280.0f, 1.0f / 720.0f));
 
         _Clear();
     }
@@ -172,6 +156,22 @@ public class DebugOverlay : MonoBehaviour
         instance._DrawHist(x, y, w, h, data, startSample, m_Colors, 1, maxRange);
     }
 
+    public static void DrawGraph(float x, float y, float w, float h, float[] data, int startSample, Color[] color, int numSets, float maxRange = -1.0f)
+    {
+        if (instance == null)
+            return;
+        instance._DrawGraph(x, y, w, h, data, startSample, color, numSets, maxRange);
+    }
+
+
+    public static void DrawGraph(float x, float y, float w, float h, float[] data, int startSample, Color color, float maxRange = -1.0f)
+    {
+        if (instance == null)
+            return;
+        m_Colors[0] = color;
+        instance._DrawGraph(x, y, w, h, data, startSample, m_Colors, 1, maxRange);
+    }
+
     public static void DrawRect(float x, float y, float w, float h, Color col)
     {
         if (instance == null)
@@ -179,11 +179,60 @@ public class DebugOverlay : MonoBehaviour
         instance._DrawRect(x, y, w, h, col);
     }
 
+    public static void DrawLine(float x1, float y1, float x2, float y2, Color col)
+    {
+        if (instance == null)
+            return;
+        instance.AddLine(x1, y1, x2, y2, col);
+    }
+
     void _DrawText(float x, float y, ref char[] text, int length)
     {
         for (var i = 0; i < length; i++)
         {
             AddQuad(m_OriginX + x + i, m_OriginY + y, 1, 1, text[i], m_CurrentColor);
+        }
+    }
+
+    void _DrawGraph(float x, float y, float w, float h, float[] data, int startSample, Color[] color, int numSets, float maxRange = -1.0f)
+    {
+        if (data.Length % numSets != 0)
+            throw new System.ArgumentException("Length of data must be a multiple of numSets");
+        if (color.Length != numSets)
+            throw new System.ArgumentException("Length of colors must be numSets");
+
+        var dataLength = data.Length;
+        var numSamples = dataLength / numSets;
+
+        float maxData = float.MinValue;
+
+        for (var i = 0; i < dataLength; i++)
+        {
+            if (data[i] > maxData)
+                maxData = data[i];
+        }
+
+        if (maxData > maxRange)
+            maxRange = maxData;
+
+        float dx = w / numSamples;
+        float scale = maxRange > 0 ? h / maxRange : 1.0f;
+
+        for (var j = 0; j < numSets; j++)
+        {
+            float old_pos_x = 0;
+            float old_pos_y = 0;
+            Vector4 col = color[j];
+            for (var i = 0; i < numSamples; i++)
+            {
+                float d = data[((i + startSample) % numSamples) * numSets + j];
+                var pos_x = m_OriginX + x + dx * i;
+                var pos_y = m_OriginY + y + h - d * scale;
+                if (i > 0)
+                    AddLine(old_pos_x, old_pos_y, pos_x, pos_y, col);
+                old_pos_x = pos_x;
+                old_pos_y = pos_y;
+            }
         }
     }
 
@@ -244,6 +293,7 @@ public class DebugOverlay : MonoBehaviour
     void _Clear()
     {
         m_NumQuadsUsed = 0;
+        m_NumLinesUsed = 0;
         SetOrigin(0, 0);
     }
 
@@ -257,24 +307,94 @@ public class DebugOverlay : MonoBehaviour
     void OnPostRender()
     {
         instanceMaterialProc.SetPass(0);
-        Graphics.DrawProcedural(MeshTopology.Triangles, m_NumInstancesUsed * 6, 1);
+        Graphics.DrawProcedural(MeshTopology.Triangles, m_NumQuadsToDraw * 6, 1);
+        m_LineMaterial.SetPass(0);
+        Graphics.DrawProcedural(MeshTopology.Triangles, m_NumLinesToDraw * 6, 1);
     }
+
+    unsafe void AddLine(float x1, float y1, float x2, float y2, Vector4 col)
+    {
+        if (m_NumLinesUsed >= m_LineInstanceData.Length)
+        {
+            // Resize
+            var newBuf = new LineInstanceData[m_LineInstanceData.Length + 128];
+            System.Array.Copy(m_LineInstanceData, newBuf, m_LineInstanceData.Length);
+            m_LineInstanceData = newBuf;
+        }
+        fixed (LineInstanceData* d = &m_LineInstanceData[m_NumLinesUsed])
+        {
+            d->color = col;
+            d->position.x = x1;
+            d->position.y = y1;
+            d->position.z = x2;
+            d->position.w = y2;
+        }
+        m_NumLinesUsed++;
+    }
+
+    unsafe void AddQuad(float x, float y, float w, float h, char c, Vector4 col)
+    {
+        if (m_NumQuadsUsed >= m_QuadInstanceData.Length)
+        {
+            // Resize
+            var newBuf = new QuadInstanceData[m_QuadInstanceData.Length + 128];
+            System.Array.Copy(m_QuadInstanceData, newBuf, m_QuadInstanceData.Length);
+            m_QuadInstanceData = newBuf;
+        }
+
+        fixed (QuadInstanceData* d = &m_QuadInstanceData[m_NumQuadsUsed])
+        {
+            if (c != '\0')
+            {
+                d->positionAndUV.z = (c - 32) % charCols;
+                d->positionAndUV.w = (c - 32) / charCols;
+                col.w = 0.0f;
+            }
+            else
+            {
+                d->positionAndUV.z = 0;
+                d->positionAndUV.w = 0;
+            }
+
+            d->color = col;
+            d->positionAndUV.x = x;
+            d->positionAndUV.y = y;
+            d->size.x = w;
+            d->size.y = h;
+            d->size.z = 0;
+            d->size.w = 0;
+        }
+
+        m_NumQuadsUsed++;
+    }
+
 
     float m_OriginX;
     float m_OriginY;
     Color m_CurrentColor = Color.white;
 
-    struct InstanceData
+    struct QuadInstanceData
     {
         public Vector4 positionAndUV; // if UV are zero, dont sample
         public Vector4 size; // zw unused
         public Vector4 color;
     }
 
+    struct LineInstanceData
+    {
+        public Vector4 position; // segment from (x,y) to (z,w)
+        public Vector4 color;
+    }
+
     int m_NumQuadsUsed = 0;
+    int m_NumLinesUsed = 0;
 
-    ComputeBuffer m_InstanceBuffer;
-    int m_NumInstancesUsed = 0;
-    InstanceData[] m_DataBuffer = new InstanceData[128];
+    ComputeBuffer m_QuadInstanceBuffer;
+    ComputeBuffer m_LineInstanceBuffer;
+    int m_NumQuadsToDraw = 0;
+    int m_NumLinesToDraw = 0;
+    QuadInstanceData[] m_QuadInstanceData = new QuadInstanceData[128];
+    LineInstanceData[] m_LineInstanceData = new LineInstanceData[128];
 
+    Material m_LineMaterial;
 }
