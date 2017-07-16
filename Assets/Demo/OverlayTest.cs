@@ -82,6 +82,7 @@ public class OverlayTest : MonoBehaviour
         frameTimeArray[frameTimeArray.Length - 1] = frameDurationMs;
         CalcStatistics(frameTimeArray, frameTimeArray.Length, out mean, out variance, out min, out max);
         DebugOverlay.DrawHist(20, 15, 20, 3, frameTimeArray, Color.red, max);
+        // Draw a 'scale' line
         DebugOverlay.DrawRect(20, 18.0f - 3.0f/max*16.6667f, 20, 0.1f, Color.black);
         DebugOverlay.Write(20, 18, "{0} ({1} +/- {2})", frameDurationMs, mean, Mathf.Sqrt(variance));
     }

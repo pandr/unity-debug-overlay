@@ -700,8 +700,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f22dbc0ede66c54f88a5e03a5c839be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  width: 80
-  height: 25
+  width: 100
+  height: 30
   instanceMaterialProc: {fileID: 2100000, guid: d8f7bc50bddf63d409565fb4ef3ce157,
     type: 2}
   charCols: 26

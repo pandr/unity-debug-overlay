@@ -9,12 +9,16 @@ public class DebugOverlay : MonoBehaviour
 
     [Header("Font material info")]
     public Material instanceMaterialProc;
+    [Tooltip("Number of columns of glyphs on texture")]
     public int charCols = 30;
+    [Tooltip("Number of rows of glyphs on texture")]
     public int charRows = 16;
+    [Tooltip("Width in pixels of each glyph")]
     public int cellWidth = 32;
+    [Tooltip("Height in pixels of each glyph")]
     public int cellHeight = 32;
 
-    // Mono stuff
+    // MonoBehaviour stuff
     void Start() { Init(); }
     void Update() { Tick(); }
     void OnDisable() { DeInit(); }
@@ -26,6 +30,10 @@ public class DebugOverlay : MonoBehaviour
         instance = this;
     }
 
+    /// <summary>
+    /// Set color of text. 
+    /// </summary>
+    /// <param name="col"></param>
     public static void SetColor(Color col)
     {
         instance.m_CurrentColor = col;
