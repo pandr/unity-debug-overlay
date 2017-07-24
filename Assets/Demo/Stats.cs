@@ -60,6 +60,7 @@ public class Stats : IGameSystem
         long ticks = m_StopWatch.ElapsedTicks;
         float frameDurationMs = (ticks - m_LastFrameTicks) * 1000 / (float)m_StopWatchFreq;
         m_LastFrameTicks = ticks;
+
         DebugOverlay.SetColor(Color.yellow);
         DebugOverlay.SetOrigin(0, 0);
         DebugOverlay.Write(0, 0, "FPS:     {0,7:###.##}", 1.0f / Time.deltaTime);
@@ -71,31 +72,35 @@ public class Stats : IGameSystem
         DebugOverlay.Write(0, 2, "FrameNo: {0,7}", Time.frameCount);
         DebugOverlay.Write(0, 3, "MonoHeap:{0,7} kb", (int)(UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong() / 1024));
 
-        /// Graphing
-        DebugOverlay.SetOrigin(0, 0);
+        /// Graphing difference between deltaTime and actual passed time
         float fps = Time.deltaTime * 1000.0f;
         var idx = (Time.frameCount * 2) % fpsArray.Length; ;
         fpsArray[idx] = -Mathf.Min(0, frameDurationMs - fps);
         fpsArray[idx + 1] = Mathf.Max(0, frameDurationMs - fps);
         float variance, mean, min, max;
         CalcStatistics(fpsArray, fpsArray.Length, out mean, out variance, out min, out max);
+
+        // Draw histogram over time differences
         DebugOverlay.DrawHist(20, 10, 20, 3, fpsArray, Time.frameCount, colors, 2, max);
-        DebugOverlay.SetColor(Color.red);
-        DebugOverlay.Write(20, 14, "{0} ({1} +/- {2})", frameDurationMs - fps, mean, Mathf.Sqrt(variance));
+        DebugOverlay.SetColor(new Color(1.0f,0.3f,0.0f));
+        DebugOverlay.Write(20, 14, "{0,4:#.###} ({1,4:##.#} +/- {2,4:#.##})", frameDurationMs - fps, mean, Mathf.Sqrt(variance));
 
         DebugOverlay.DrawGraph(45, 10, 40, 3, fpsArray, Time.frameCount, colors, 2, max);
 
+        /// Graphing frametime
         var idx2 = Time.frameCount % frameTimeArray.Length;
         frameTimeArray[idx2] = frameDurationMs;
         CalcStatistics(frameTimeArray, frameTimeArray.Length, out mean, out variance, out min, out max);
         DebugOverlay.DrawHist(20, 15, 20, 3, frameTimeArray, Time.frameCount, Color.red, max);
-        // Draw a 'scale' line
+
+        // Draw legend
         float scale = 18.0f - 3.0f / max * 16.6667f;
         DebugOverlay.DrawLine(20, scale, 40, scale, Color.black);
-        DebugOverlay.Write(20, 18, "{0} ({1} +/- {2})", frameDurationMs, mean, Mathf.Sqrt(variance));
+        DebugOverlay.Write(20, 18, "{0,5} ({1} +/- {2})", frameDurationMs, mean, Mathf.Sqrt(variance));
 
         DebugOverlay.DrawGraph(45, 15, 40, 3, frameTimeArray, Time.frameCount, Color.red, max);
 
+        // Draw some lines
         float ratio = (float)DebugOverlay.Height / DebugOverlay.Width * Screen.width / Screen.height;
         for (var i = 0; i < 10; i++)
             DebugOverlay.DrawLine(60, 20, 60 + Mathf.Sin(Mathf.PI*0.2f*i + Time.time) * 8.0f, 20 + Mathf.Cos(Mathf.PI*0.2f*i + Time.time) * 8.0f * ratio, Color.black);

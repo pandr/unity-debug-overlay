@@ -14,13 +14,7 @@ public class Console : IGameSystem
     float m_ConsoleFoldout;
     float m_ConsoleFoldoutDest;
 
-    enum ConsoleState
-    {
-        Closed,
-        SneakPeek,
-        Open
-    }
-    ConsoleState m_ConsoleState;
+    bool m_ConsoleOpen;
 
     char[] m_InputFieldBuffer;
     int m_CursorPos = 0;
@@ -110,25 +104,12 @@ public class Console : IGameSystem
     {
         if (Input.GetKeyDown(KeyCode.F12))
         {
-            switch (m_ConsoleState)
-            {
-                case ConsoleState.Closed:
-                    m_ConsoleState = ConsoleState.Open;
-                    m_ConsoleFoldoutDest = 1.0f;
-                    break;
-                case ConsoleState.Open:
-                    m_ConsoleState = ConsoleState.SneakPeek;
-                    m_ConsoleFoldoutDest = 0.1f;
-                    break;
-                case ConsoleState.SneakPeek:
-                    m_ConsoleState = ConsoleState.Closed;
-                    m_ConsoleFoldoutDest = 0.0f;
-                    break;
-            }
+            m_ConsoleOpen = !m_ConsoleOpen;
+            m_ConsoleFoldoutDest = m_ConsoleOpen ? 1.0f : 0.0f;
             Show(m_ConsoleFoldoutDest);
         }
 
-        if (m_ConsoleState != ConsoleState.Open)
+        if (!m_ConsoleOpen)
             return;
 
         Scroll((int)Input.mouseScrollDelta.y);
@@ -208,14 +189,24 @@ public class Console : IGameSystem
             line -= 1;
         }
 
+        Vector4 col = m_TextColor;
+        UInt32 icol = 0;
         for (var i = 0; i < m_Height - 1; i++, line--)
         {
             var idx = (line % m_NumLines) * m_Width;
             for (var j = 0; j < m_Width; j++)
             {
-                char c = (char)(m_ConsoleBuffer[idx + j] & 0xff);
+                UInt32 c = m_ConsoleBuffer[idx + j];
+                char ch = (char)(c & 0xff);
+                if (icol != (c & 0xffffff00))
+                {
+                    icol = c & 0xffffff00;
+                    col.x = (float)((icol >> 24) & 0xff) / 255.0f;
+                    col.y = (float)((icol >> 16) & 0xff) / 255.0f;
+                    col.z = (float)((icol >> 8) & 0xff) / 255.0f;
+                }
                 if (c != '\0')
-                    DebugOverlay.instance.AddQuad(j, m_Height - 2 - i + yoffset, 1, 1, c, m_TextColor);
+                    DebugOverlay.instance.AddQuad(j, m_Height - 2 - i + yoffset, 1, 1, ch, col);
             }
         }
 
@@ -228,8 +219,7 @@ public class Console : IGameSystem
             if (c != '\0')
                 DebugOverlay.instance.AddQuad(i - horizontalScroll, m_Height - 1 + yoffset, 1, 1, c, m_TextColor);
         }
-        if(m_ConsoleState == ConsoleState.Open)
-            DebugOverlay.instance.AddQuad(m_CursorPos - horizontalScroll, m_Height - 1 + yoffset, 1, 1, '\0', m_CursorCol);
+        DebugOverlay.instance.AddQuad(m_CursorPos - horizontalScroll, m_Height - 1 + yoffset, 1, 1, '\0', m_CursorCol);
     }
 
     void NewLine()
@@ -260,6 +250,8 @@ public class Console : IGameSystem
 
     public void _Write(char[] buf, int length)
     {
+        const string hexes = "0123456789ABCDEF";
+        UInt32 col = 0xBBBBBB00;
         for (int i = 0; i < length; i++)
         {
             if (buf[i] == '\n')
@@ -267,8 +259,21 @@ public class Console : IGameSystem
                 NewLine();
                 continue;
             }
+            // Parse color markup of the form �AF7 -> color(0xAA, 0xFF, 0x77)
+            if (buf[i] == '�' && i < length - 3)
+            {
+                UInt32 res = 0;
+                for (var j = i + 1; j < i + 4; j++)
+                {
+                    var v = (uint)hexes.IndexOf(buf[j]);
+                    res = res * 256 + v * 16 + v;
+                }
+                col = res << 8;
+                i += 3;
+                continue;
+            }
             var idx = (m_LastLine % m_NumLines) * m_Width + m_LastColumn;
-            m_ConsoleBuffer[idx] = (byte)buf[i];
+            m_ConsoleBuffer[idx] = col | (byte)buf[i];
             m_LastColumn++;
             if (m_LastColumn >= m_Width)
             {
@@ -352,10 +357,10 @@ public class Console : IGameSystem
         {
             // write list of possible completions
             for (var i = 0; i < matches.Count; i++)
-                Write(" {0}\n",matches[i]);
+                Write(" {0}\n", matches[i]);
         }
 
-        if(matches.Count == 1)
+        if (matches.Count == 1)
             Type(' ');
     }
 

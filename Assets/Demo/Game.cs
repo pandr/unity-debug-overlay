@@ -39,7 +39,7 @@ public class Game
         m_Stats = new Stats();
         m_Stats.Init();
 
-        Game.console.Write("Game initialized\n");
+        Game.console.Write("§FFFGame initialized§F44.§4F4.§44F.\n");
     }
 
     public void Shutdown()
