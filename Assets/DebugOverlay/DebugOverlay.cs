@@ -4,8 +4,10 @@ using System.Collections;
 public class DebugOverlay : MonoBehaviour
 {
     [Header("Overlay size")]
-    public int width = 80;
-    public int height = 25;
+    [SerializeField]
+    int width = 80;
+    [SerializeField]
+    int height = 25;
 
     [Header("Font material info")]
     public Material instanceMaterialProc;
@@ -19,6 +21,9 @@ public class DebugOverlay : MonoBehaviour
     public int cellHeight = 32;
 
     public static DebugOverlay instance;
+
+    public static int Width { get { return instance.width; } }
+    public static int Height { get { return instance.height; } }
 
     public void Init()
     {
@@ -306,10 +311,10 @@ public class DebugOverlay : MonoBehaviour
 
     void OnPostRender()
     {
-        instanceMaterialProc.SetPass(0);
-        Graphics.DrawProcedural(MeshTopology.Triangles, m_NumQuadsToDraw * 6, 1);
         m_LineMaterial.SetPass(0);
         Graphics.DrawProcedural(MeshTopology.Triangles, m_NumLinesToDraw * 6, 1);
+        instanceMaterialProc.SetPass(0);
+        Graphics.DrawProcedural(MeshTopology.Triangles, m_NumQuadsToDraw * 6, 1);
     }
 
     unsafe void AddLine(float x1, float y1, float x2, float y2, Vector4 col)
@@ -332,7 +337,7 @@ public class DebugOverlay : MonoBehaviour
         m_NumLinesUsed++;
     }
 
-    unsafe void AddQuad(float x, float y, float w, float h, char c, Vector4 col)
+    public unsafe void AddQuad(float x, float y, float w, float h, char c, Vector4 col)
     {
         if (m_NumQuadsUsed >= m_QuadInstanceData.Length)
         {

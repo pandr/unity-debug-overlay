@@ -1,6 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class OverlayTest : MonoBehaviour
 {
@@ -11,6 +14,7 @@ public class OverlayTest : MonoBehaviour
     long m_StopWatchFreq;
     long m_LastFrameTicks;
     DebugOverlay m_DebugOverlay;
+    Console m_Console;
 
     void Awake()
     {
@@ -21,12 +25,26 @@ public class OverlayTest : MonoBehaviour
         Debug.Assert(System.Diagnostics.Stopwatch.IsHighResolution);
         m_DebugOverlay = GetComponent<DebugOverlay>();
         m_DebugOverlay.Init();
+        m_Console = new Console();
+        m_Console.Init(DebugOverlay.Width, DebugOverlay.Height);
+        m_Console.AddCommand("quit", CmdQuit, "Quit game");
     }
+
+    void CmdQuit(string[] args)
+    {
+#if UNITY_EDITOR
+        EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
+
 
     void OnDestroy()
     {
         m_DebugOverlay.Shutdown();
         m_DebugOverlay = null;
+        m_Console = null;
     }
 
     int dataIndex = 0;
@@ -104,10 +122,17 @@ public class OverlayTest : MonoBehaviour
 
         for (var i = 0; i < 30; i++)
             DebugOverlay.DrawLine(20, 20, 20 + Mathf.Sin(i) * 10, 20 + Mathf.Cos(i) * 10, Color.black);
+
+        if (Time.frameCount % 100 == 0)
+            m_Console.Write(".");
+
+        m_Console.TickUpdate();
     }
+
 
     void LateUpdate()
     {
+        m_Console.TickLateUpdate();
         m_DebugOverlay.TickLateUpdate();
     }
 }
