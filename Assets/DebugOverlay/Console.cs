@@ -3,10 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Console
+public class Console : IGameSystem
 {
-    int m_Width = 80;
-    int m_Height = 25;
+    int m_Width;
+    int m_Height;
     int m_NumLines;
     int m_LastLine;
     int m_LastColumn;
@@ -50,10 +50,20 @@ public class Console
         }
     }
 
+    public void Init()
+    {
+        Init(80, 25);
+    }
+
     public void Init(int width, int height)
     {
         Resize(width, height);
         Clear();
+    }
+
+    public void Shutdown()
+    {
+
     }
 
     public delegate void CommandDelegate(string[] args);
@@ -73,9 +83,6 @@ public class Console
 
     public void Resize(int width, int height)
     {
-        var oldWidth = m_Width;
-        var oldHeight = m_Height;
-
         m_Width = width;
         m_Height = height;
         m_NumLines = m_ConsoleBuffer.Length / m_Width;
@@ -137,6 +144,8 @@ public class Console
                 m_CursorPos = m_InputFieldLength;
             else if (Input.GetKeyDown(KeyCode.Backspace))
                 Backspace();
+            else if (Input.GetKeyDown(KeyCode.Tab))
+                TabComplete();
             else if (Input.GetKeyDown(KeyCode.Return))
             {
                 ExecuteCommand(new string(m_InputFieldBuffer, 0, m_InputFieldLength));
@@ -219,7 +228,8 @@ public class Console
             if (c != '\0')
                 DebugOverlay.instance.AddQuad(i - horizontalScroll, m_Height - 1 + yoffset, 1, 1, c, m_TextColor);
         }
-        DebugOverlay.instance.AddQuad(m_CursorPos - horizontalScroll, m_Height - 1 + yoffset, 1, 1, '\0', m_CursorCol);
+        if(m_ConsoleState == ConsoleState.Open)
+            DebugOverlay.instance.AddQuad(m_CursorPos - horizontalScroll, m_Height - 1 + yoffset, 1, 1, '\0', m_CursorCol);
     }
 
     void NewLine()
@@ -310,4 +320,55 @@ public class Console
         m_CursorPos--;
         m_InputFieldLength--;
     }
+
+    void TabComplete()
+    {
+        string prefix = new string(m_InputFieldBuffer, 0, m_CursorPos);
+
+        // Look for possible tab completions
+        List<string> matches = new List<string>();
+
+        foreach (var c in m_Commands)
+        {
+            var name = c.Key;
+            if (!name.StartsWith(prefix, true, null))
+                continue;
+            matches.Add(name);
+        }
+
+        if (matches.Count == 0)
+            return;
+
+        // Look for longest common prefix
+        int lcp = matches[0].Length;
+        for (var i = 0; i < matches.Count - 1; i++)
+        {
+            lcp = Mathf.Min(lcp, CommonPrefix(matches[i], matches[i + 1]));
+        }
+        var bestMatch = matches[0].Substring(prefix.Length, lcp - prefix.Length);
+        foreach (var c in bestMatch)
+            Type(c);
+        if (matches.Count > 1)
+        {
+            // write list of possible completions
+            for (var i = 0; i < matches.Count; i++)
+                Write(" {0}\n",matches[i]);
+        }
+
+        if(matches.Count == 1)
+            Type(' ');
+    }
+
+    // Returns length of largest common prefix of two strings
+    static int CommonPrefix(string a, string b)
+    {
+        int minl = Mathf.Min(a.Length, b.Length);
+        for (int i = 1; i <= minl; i++)
+        {
+            if (!a.StartsWith(b.Substring(0, i), true, null))
+                return i - 1;
+        }
+        return minl;
+    }
+
 }

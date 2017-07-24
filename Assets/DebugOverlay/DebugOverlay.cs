@@ -25,12 +25,15 @@ public class DebugOverlay : MonoBehaviour
     public static int Width { get { return instance.width; } }
     public static int Height { get { return instance.height; } }
 
-    public void Init()
+    void Awake()
     {
         m_LineMaterial = new Material(Shader.Find("Instanced/LineShaderProc"));
-        instance = this;
     }
 
+    public void Init()
+    {
+        instance = this;
+    }
 
     public void Shutdown()
     {
