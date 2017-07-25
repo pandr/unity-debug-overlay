@@ -2,7 +2,12 @@
 A fast and (almost) garbage free debug overlay for Unity. The projects contains two primary components: a debug overlay
 and a console.
 
-# Debug overlay
+## Performance
+Garbage production is minimized by not really using strings a lot and by having convenience functions that mimick string
+formatting (stuff like `"This: {0}"`) known from C#. Rendering happens through the magic of a few procedural draw calls
+and is quite fast.
+
+## Debug overlay
 The debug overlay, useful for displaying text and graphs that update every frame.
 Like this: ![Pretty picture](https://user-images.githubusercontent.com/4175246/28583020-e34a3a12-7167-11e7-8871-7199f410aa8d.gif)
 
@@ -19,7 +24,7 @@ This can be done with some level of convenience using this code:
 
 Even though it involves string formatting, not garbage will be generated.
 
-# Console
+## Console
 The console is useful for checking logs / output while ingame and also for easily registrering commands
 that can be used to tweak the game behaviour or turn on/off debugging aspects.
 
