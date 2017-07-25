@@ -52,6 +52,7 @@ public class Stats : IGameSystem
     }
 
     static Color[] colors = new Color[] { Color.red, Color.green };
+    float[] fpsHistory = new float[50];
     public void TickUpdate()
     {
         if (m_ShowStats < 1)
@@ -63,14 +64,17 @@ public class Stats : IGameSystem
 
         DebugOverlay.SetColor(Color.yellow);
         DebugOverlay.SetOrigin(0, 0);
-        DebugOverlay.Write(0, 0, "FPS:     {0,7:###.##}", 1.0f / Time.deltaTime);
+
+        DebugOverlay.Write(1, 0, "FPS:{0,6:###.##}", 1.0f / Time.deltaTime);
+        fpsHistory[Time.frameCount % fpsHistory.Length] = 1.0f / Time.deltaTime;
+        DebugOverlay.DrawGraph(1, 1, 9, 1.5f, fpsHistory, Time.frameCount % fpsHistory.Length, Color.green);
       
         if (m_ShowStats < 2)
             return;
 
-        DebugOverlay.Write(0, 1, "Hello, {0,-5} world!", Time.frameCount % 100 < 50 ? "Happy" : "Evil");
-        DebugOverlay.Write(0, 2, "FrameNo: {0,7}", Time.frameCount);
-        DebugOverlay.Write(0, 3, "MonoHeap:{0,7} kb", (int)(UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong() / 1024));
+        DebugOverlay.Write(0, 4, "Hello, {0,-5} world!", Time.frameCount % 100 < 50 ? "Happy" : "Evil");
+        DebugOverlay.Write(0, 5, "FrameNo: {0,7}", Time.frameCount);
+        DebugOverlay.Write(0, 6, "MonoHeap:{0,7} kb", (int)(UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong() / 1024));
 
         /// Graphing difference between deltaTime and actual passed time
         float fps = Time.deltaTime * 1000.0f;

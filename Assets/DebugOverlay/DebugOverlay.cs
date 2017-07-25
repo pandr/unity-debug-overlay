@@ -242,6 +242,8 @@ public class DebugOverlay : MonoBehaviour
                 old_pos_y = pos_y;
             }
         }
+        AddLine(x, y + h, x + w, y + h, color[0]);
+        AddLine(x, y, x, y + h, color[0]);
     }
 
     void _DrawHist(float x, float y, float w, float h, float[] data, int startSample, Color[] color, int numSets, float maxRange = -1.0f)

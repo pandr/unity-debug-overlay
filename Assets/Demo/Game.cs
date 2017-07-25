@@ -34,6 +34,7 @@ public class Game
 
         m_Console = new Console();
         m_Console.Init(DebugOverlay.Width, DebugOverlay.Height);
+
         m_Console.AddCommand("quit", CmdQuit, "Quit game");
 
         m_Stats = new Stats();
@@ -58,6 +59,7 @@ public class Game
 
     void CmdQuit(string[] args)
     {
+        Game.console.Write("Goodbye\n");
 #if UNITY_EDITOR
         EditorApplication.isPlaying = false;
 #else
