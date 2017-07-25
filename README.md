@@ -4,7 +4,7 @@ and a console.
 
 ## Performance
 Garbage production is minimized by not really using strings a lot and by having convenience functions that mimick string
-formatting (stuff like `"This: {0}"`) known from C#. Rendering happens through the magic of a few procedural draw calls
+formatting (using format strings like `"This: {0}"`) known from C#. Rendering happens through the magic of a few procedural draw calls
 and is quite fast.
 
 ## Debug overlay
@@ -30,7 +30,7 @@ Even though it looks like regular string formatting, no garbage will be generate
 The console is useful for checking logs / output while ingame and also for easily registrering commands
 that can be used to tweak the game behaviour or turn on/off debugging aspects.
 
-You can write stuff like
+You can write
 
 ```c#
     // Register quit command
