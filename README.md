@@ -8,13 +8,15 @@ formatting (stuff like `"This: {0}"`) known from C#. Rendering happens through t
 and is quite fast.
 
 ## Debug overlay
-The debug overlay, useful for displaying text and graphs that update every frame.
-Like this: ![Pretty picture](https://user-images.githubusercontent.com/4175246/28583020-e34a3a12-7167-11e7-8871-7199f410aa8d.gif)
+The debug overlay is useful for displaying text and graphs that update every frame.
+Like this:
+
+![Pretty picture](https://user-images.githubusercontent.com/4175246/28583020-e34a3a12-7167-11e7-8871-7199f410aa8d.gif)
 
 This can be done with some level of convenience using this code:
 
 ```c#
-	// FPS in top left corner
+    // FPS in top left corner
     DebugOverlay.Write(1, 0, "FPS:{0,6:###.##}", 1.0f / Time.deltaTime);
 
     // Small graph of FPS below
@@ -22,7 +24,7 @@ This can be done with some level of convenience using this code:
     DebugOverlay.DrawGraph(1, 1, 9, 1.5f, fpsHistory, Time.frameCount % fpsHistory.Length, Color.green);
 ```
 
-Even though it involves string formatting, not garbage will be generated.
+Even though it looks like regular string formatting, no garbage will be generated.
 
 ## Console
 The console is useful for checking logs / output while ingame and also for easily registrering commands
@@ -31,8 +33,7 @@ that can be used to tweak the game behaviour or turn on/off debugging aspects.
 You can write stuff like
 
 ```c#
-
-	// Register quit command
+    // Register quit command
     Game.console.AddCommand("quit", CmdQuit, "Quit game");
 
     /* ... */
@@ -42,12 +43,9 @@ You can write stuff like
     	Game.console.
         Application.Quit();
     }
-
-
-
 ```
 
-and it will look like this
+and it will work like this:
 
 ![Pretty picture](https://user-images.githubusercontent.com/4175246/28582984-d215e5f2-7167-11e7-99ff-e96b2981b9bb.gif)
 
