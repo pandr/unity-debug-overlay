@@ -259,8 +259,8 @@ public class Console : IGameSystem
                 NewLine();
                 continue;
             }
-            // Parse color markup of the form �AF7 -> color(0xAA, 0xFF, 0x77)
-            if (buf[i] == '�' && i < length - 3)
+            // Parse color markup of the form ^AF7 -> color(0xAA, 0xFF, 0x77)
+            if (buf[i] == '^' && i < length - 3)
             {
                 UInt32 res = 0;
                 for (var j = i + 1; j < i + 4; j++)
