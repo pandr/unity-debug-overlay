@@ -115,6 +115,14 @@ public class DebugOverlay : MonoBehaviour
         instance.m_OriginY = y;
     }
 
+    public static void Write(float x, float y, char[] buf, int count)
+    {
+        if (instance == null)
+            return;
+        for (var i = 0; i < count; i++)
+            instance.AddQuad(x + i, y, 1, 1, buf[i], instance.m_CurrentColor);
+    }
+
     public static void Write(float x, float y, string format)
     {
         if (instance == null)
@@ -198,9 +206,24 @@ public class DebugOverlay : MonoBehaviour
 
     void _DrawText(float x, float y, ref char[] text, int length)
     {
+        const string hexes = "0123456789ABCDEF";
+        Vector4 col = m_CurrentColor;
+        int xpos = 0;
         for (var i = 0; i < length; i++)
         {
-            AddQuad(m_OriginX + x + i, m_OriginY + y, 1, 1, text[i], m_CurrentColor);
+            if (text[i] == '^' && i < length - 3)
+            {
+                var r = hexes.IndexOf(text[i + 1]);
+                var g = hexes.IndexOf(text[i + 2]);
+                var b = hexes.IndexOf(text[i + 3]);
+                col.x = (float)(r * 16 + r) / 255.0f;
+                col.y = (float)(g * 16 + g) / 255.0f;
+                col.z = (float)(b * 16 + b) / 255.0f;
+                i += 3;
+                continue;
+            }
+            AddQuad(m_OriginX + x + xpos, m_OriginY + y, 1, 1, text[i], col);
+            xpos++;
         }
     }
 
