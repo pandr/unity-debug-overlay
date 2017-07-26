@@ -6,6 +6,11 @@ using System;
 using UnityEditor;
 #endif
 
+/// <summary>
+/// The Game object before anything else (through BootSequence) and it is a global.
+/// This is where all game systems are constructed and initialized and ticked from.
+/// </summary>
+
 interface IGameSystem
 {
     void Init();
@@ -29,7 +34,8 @@ public class Game
         Debug.Assert(_instance == null);
         _instance = this;
 
-        m_DebugOverlay = GameObject.FindObjectOfType<DebugOverlay>();
+        m_DebugOverlay = GameObject.Instantiate(Resources.Load<DebugOverlay>("DebugOverlay"));
+        GameObject.DontDestroyOnLoad(m_DebugOverlay);
         m_DebugOverlay.Init();
 
         m_Console = new Console();
@@ -40,7 +46,7 @@ public class Game
         m_Stats = new Stats();
         m_Stats.Init();
 
-        Game.console.Write("§FFFGame initialized§F44.§4F4.§44F.\n");
+        Game.console.Write("ï¿½FFFGame initializedï¿½F44.ï¿½4F4.ï¿½44F.\n");
     }
 
     public void Shutdown()

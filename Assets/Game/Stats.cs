@@ -104,10 +104,11 @@ public class Stats : IGameSystem
 
         DebugOverlay.DrawGraph(45, 15, 40, 3, frameTimeArray, Time.frameCount, Color.red, max);
 
-        // Draw some lines
+        // Draw some lines to help visualize framerate fluctuations
         float ratio = (float)DebugOverlay.Height / DebugOverlay.Width * Screen.width / Screen.height;
+        float time = (float)Time.frameCount / 60.0f;
         for (var i = 0; i < 10; i++)
-            DebugOverlay.DrawLine(60, 20, 60 + Mathf.Sin(Mathf.PI*0.2f*i + Time.time) * 8.0f, 20 + Mathf.Cos(Mathf.PI*0.2f*i + Time.time) * 8.0f * ratio, Color.black);
+            DebugOverlay.DrawLine(60, 20, 60 + Mathf.Sin(Mathf.PI*0.2f*i + time) * 8.0f, 20 + Mathf.Cos(Mathf.PI*0.2f*i + time) * 8.0f * ratio, Color.black);
     }
 
     public void Shutdown() { }

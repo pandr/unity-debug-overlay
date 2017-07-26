@@ -20,6 +20,8 @@ public class DebugOverlay : MonoBehaviour
     [Tooltip("Height in pixels of each glyph")]
     public int cellHeight = 32;
 
+    public Shader lineShaderProc;
+
     public static DebugOverlay instance;
 
     public static int Width { get { return instance.width; } }
@@ -27,7 +29,7 @@ public class DebugOverlay : MonoBehaviour
 
     void Awake()
     {
-        m_LineMaterial = new Material(Shader.Find("Instanced/LineShaderProc"));
+        m_LineMaterial = new Material(lineShaderProc);
     }
 
     public void Init()
