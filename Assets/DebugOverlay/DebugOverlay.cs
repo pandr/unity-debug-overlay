@@ -157,6 +157,13 @@ public class DebugOverlay : MonoBehaviour
         instance._Write(x, y, format, new ArgList3<T0, T1, T2>(arg0, arg1, arg2));
     }
 
+    public static void Write<T0, T1, T2, T3>(float x, float y, string format, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+    {
+        if (instance == null)
+            return;
+        instance._Write(x, y, format, new ArgList4<T0, T1, T2, T3>(arg0, arg1, arg2, arg3));
+    }
+
     // Draw a stacked histogram from numSets of data. Data must contain numSets of interleaved, non-negative datapoints.
     public static void DrawHist(float x, float y, float w, float h, float[] data, int startSample, Color[] color, int numSets, float maxRange = -1.0f)
     {

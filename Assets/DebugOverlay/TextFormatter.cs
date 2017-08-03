@@ -14,11 +14,16 @@ public unsafe interface IConverter<T>
     void Convert(ref char* dst, char* end, T value, FormatSpec formatSpec);
 }
 
-public unsafe class Converter : IConverter<int>, IConverter<float>, IConverter<string>
+public unsafe class Converter : IConverter<int>, IConverter<float>, IConverter<string>, IConverter<byte>
 {
     public static Converter instance = new Converter();
 
     void IConverter<int>.Convert(ref char* dst, char* end, int value, FormatSpec formatSpec)
+    {
+        ConvertInt(ref dst, end, value, formatSpec.argWidth, formatSpec.integerWidth, formatSpec.leadingZero);
+    }
+
+    void IConverter<byte>.Convert(ref char* dst, char* end, byte value, FormatSpec formatSpec)
     {
         ConvertInt(ref dst, end, value, formatSpec.argWidth, formatSpec.integerWidth, formatSpec.leadingZero);
     }
@@ -187,6 +192,32 @@ public unsafe struct ArgList3<T0, T1, T2> : IArgList
             case 0: (Converter.instance as IConverter<T0>).Convert(ref dst, end, t0, formatSpec); break;
             case 1: (Converter.instance as IConverter<T1>).Convert(ref dst, end, t1, formatSpec); break;
             case 2: (Converter.instance as IConverter<T2>).Convert(ref dst, end, t2, formatSpec); break;
+        }
+    }
+}
+
+public unsafe struct ArgList4<T0, T1, T2, T3> : IArgList
+{
+    public int Count { get { return 4; } }
+    T0 t0;
+    T1 t1;
+    T2 t2;
+    T3 t3;
+    public ArgList4(T0 a0, T1 a1, T2 a2, T3 a3)
+    {
+        t0 = a0;
+        t1 = a1;
+        t2 = a2;
+        t3 = a3;
+    }
+    public void Format(ref char* dst, char* end, int argIndex, FormatSpec formatSpec)
+    {
+        switch (argIndex)
+        {
+            case 0: (Converter.instance as IConverter<T0>).Convert(ref dst, end, t0, formatSpec); break;
+            case 1: (Converter.instance as IConverter<T1>).Convert(ref dst, end, t1, formatSpec); break;
+            case 2: (Converter.instance as IConverter<T2>).Convert(ref dst, end, t2, formatSpec); break;
+            case 3: (Converter.instance as IConverter<T3>).Convert(ref dst, end, t3, formatSpec); break;
         }
     }
 }
