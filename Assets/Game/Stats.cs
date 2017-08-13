@@ -5,7 +5,7 @@ using UnityEngine;
 public class Stats : IGameSystem
 {
 
-    float[] fpsArray = new float[200];
+    float[][] fpsArray = new float[2][] { new float[100], new float[100] };
     float[] frameTimeArray = new float[100];
 
     System.Diagnostics.Stopwatch m_StopWatch;
@@ -29,11 +29,12 @@ public class Stats : IGameSystem
         m_ShowStats = (m_ShowStats + 1) % 3;
     }
 
-    void CalcStatistics(float[] data, int count, out float mean, out float variance, out float minValue, out float maxValue)
+    void CalcStatistics(float[] data, out float mean, out float variance, out float minValue, out float maxValue)
     {
         float sum = 0, sum2 = 0;
         minValue = float.MaxValue;
         maxValue = float.MinValue;
+        int count = data.Length;
         for (var i = 0; i < count; i++)
         {
             var x = data[i];
@@ -78,23 +79,23 @@ public class Stats : IGameSystem
 
         /// Graphing difference between deltaTime and actual passed time
         float fps = Time.deltaTime * 1000.0f;
-        var idx = (Time.frameCount * 2) % fpsArray.Length; ;
-        fpsArray[idx] = -Mathf.Min(0, frameDurationMs - fps);
-        fpsArray[idx + 1] = Mathf.Max(0, frameDurationMs - fps);
+        var idx = Time.frameCount % fpsArray[0].Length; ;
+        fpsArray[0][idx] = -Mathf.Min(0, frameDurationMs - fps);
+        fpsArray[1][idx] = Mathf.Max(0, frameDurationMs - fps);
         float variance, mean, min, max;
-        CalcStatistics(fpsArray, fpsArray.Length, out mean, out variance, out min, out max);
+        CalcStatistics(fpsArray[0], out mean, out variance, out min, out max);
 
         // Draw histogram over time differences
-        DebugOverlay.DrawHist(20, 10, 20, 3, fpsArray, Time.frameCount, colors, 2, max);
+        DebugOverlay.DrawHist(20, 10, 20, 3, fpsArray, Time.frameCount, colors, max);
         DebugOverlay.SetColor(new Color(1.0f,0.3f,0.0f));
         DebugOverlay.Write(20, 14, "{0,4:#.###} ({1,4:##.#} +/- {2,4:#.##})", frameDurationMs - fps, mean, Mathf.Sqrt(variance));
 
-        DebugOverlay.DrawGraph(45, 10, 40, 3, fpsArray, Time.frameCount, colors, 2, max);
+        DebugOverlay.DrawGraph(45, 10, 40, 3, fpsArray, Time.frameCount, colors, max);
 
         /// Graphing frametime
         var idx2 = Time.frameCount % frameTimeArray.Length;
         frameTimeArray[idx2] = frameDurationMs;
-        CalcStatistics(frameTimeArray, frameTimeArray.Length, out mean, out variance, out min, out max);
+        CalcStatistics(frameTimeArray, out mean, out variance, out min, out max);
         DebugOverlay.DrawHist(20, 15, 20, 3, frameTimeArray, Time.frameCount, Color.red, max);
 
         // Draw legend

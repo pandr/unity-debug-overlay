@@ -164,37 +164,41 @@ public class DebugOverlay : MonoBehaviour
         instance._Write(x, y, format, new ArgList4<T0, T1, T2, T3>(arg0, arg1, arg2, arg3));
     }
 
-    // Draw a stacked histogram from numSets of data. Data must contain numSets of interleaved, non-negative datapoints.
-    public static void DrawHist(float x, float y, float w, float h, float[] data, int startSample, Color[] color, int numSets, float maxRange = -1.0f)
-    {
-        if (instance == null)
-            return;
-        instance._DrawHist(x, y, w, h, data, startSample, color, numSets, maxRange);
-    }
-
-    static Color[] m_Colors = new Color[1];
+    // Draw a histogram of one set of data. Data must contain non-negative datapoints.
     public static void DrawHist(float x, float y, float w, float h, float[] data, int startSample, Color color, float maxRange = -1.0f)
     {
         if (instance == null)
             return;
-        m_Colors[0] = color;
-        instance._DrawHist(x, y, w, h, data, startSample, m_Colors, 1, maxRange);
+        s_TempData[0] = data;
+        s_TempColors[0] = color;
+        instance._DrawHist(x, y, w, h, s_TempData, startSample, s_TempColors, maxRange);
+        s_TempData[0] = null;
     }
+    static float[][] s_TempData = new float[1][];
+    static Color[] s_TempColors = new Color[1];
 
-    public static void DrawGraph(float x, float y, float w, float h, float[] data, int startSample, Color[] color, int numSets, float maxRange = -1.0f)
+    // Draw a stacked histogram multiple sets of data. Data must contain non-negative datapoints.
+    public static void DrawHist(float x, float y, float w, float h, float[][] data, int startSample, Color[] color, float maxRange = -1.0f)
     {
         if (instance == null)
             return;
-        instance._DrawGraph(x, y, w, h, data, startSample, color, numSets, maxRange);
+        instance._DrawHist(x, y, w, h, data, startSample, color, maxRange);
     }
-
 
     public static void DrawGraph(float x, float y, float w, float h, float[] data, int startSample, Color color, float maxRange = -1.0f)
     {
         if (instance == null)
             return;
-        m_Colors[0] = color;
-        instance._DrawGraph(x, y, w, h, data, startSample, m_Colors, 1, maxRange);
+        s_TempData[0] = data;
+        s_TempColors[0] = color;
+        instance._DrawGraph(x, y, w, h, s_TempData, startSample, s_TempColors, maxRange);
+    }
+
+    public static void DrawGraph(float x, float y, float w, float h, float[][] data, int startSample, Color[] color, float maxRange = -1.0f)
+    {
+        if (instance == null)
+            return;
+        instance._DrawGraph(x, y, w, h, data, startSample, color, maxRange);
     }
 
     public static void DrawRect(float x, float y, float w, float h, Color col)
@@ -234,22 +238,32 @@ public class DebugOverlay : MonoBehaviour
         }
     }
 
-    void _DrawGraph(float x, float y, float w, float h, float[] data, int startSample, Color[] color, int numSets, float maxRange = -1.0f)
+    void _DrawGraph(float x, float y, float w, float h, float[][] data, int startSample, Color[] color, float maxRange = -1.0f)
     {
-        if (data.Length % numSets != 0)
-            throw new System.ArgumentException("Length of data must be a multiple of numSets");
-        if (color.Length != numSets)
-            throw new System.ArgumentException("Length of colors must be numSets");
+        if(data == null || data.Length == 0 || data[0] == null)
+            throw new System.ArgumentException("Invalid data argument (data must contain at least one non null array");
 
-        var dataLength = data.Length;
-        var numSamples = dataLength / numSets;
+        var numSamples = data[0].Length;
+        /*
+        for(int i = 1; i < data.Length; ++i)
+        {
+            if(data[i] == null || data[i].Length != numSamples)
+                throw new System.ArgumentException("Length of data of all arrays must be the same");
+        }
+        */
+
+        if (color.Length != data.Length)
+            throw new System.ArgumentException("Length of colors must match number of datasets");
 
         float maxData = float.MinValue;
 
-        for (var i = 0; i < dataLength; i++)
+        foreach (var dataset in data)
         {
-            if (data[i] > maxData)
-                maxData = data[i];
+            for (var i = 0; i < numSamples; i++)
+            {
+                if (dataset[i] > maxData)
+                    maxData = dataset[i];
+            }
         }
 
         if (maxData > maxRange)
@@ -258,14 +272,14 @@ public class DebugOverlay : MonoBehaviour
         float dx = w / numSamples;
         float scale = maxRange > 0 ? h / maxRange : 1.0f;
 
-        for (var j = 0; j < numSets; j++)
+        for (var j = 0; j < data.Length; j++)
         {
             float old_pos_x = 0;
             float old_pos_y = 0;
             Vector4 col = color[j];
             for (var i = 0; i < numSamples; i++)
             {
-                float d = data[((i + startSample) % numSamples) * numSets + j];
+                float d = data[j][(i + startSample) % numSamples];
                 var pos_x = m_OriginX + x + dx * i;
                 var pos_y = m_OriginY + y + h - d * scale;
                 if (i > 0)
@@ -274,19 +288,29 @@ public class DebugOverlay : MonoBehaviour
                 old_pos_y = pos_y;
             }
         }
+
         AddLine(x, y + h, x + w, y + h, color[0]);
         AddLine(x, y, x, y + h, color[0]);
     }
 
-    void _DrawHist(float x, float y, float w, float h, float[] data, int startSample, Color[] color, int numSets, float maxRange = -1.0f)
+    void _DrawHist(float x, float y, float w, float h, float[][] data, int startSample, Color[] color, float maxRange = -1.0f)
     {
-        if (data.Length % numSets != 0)
-            throw new System.ArgumentException("Length of data must be a multiple of numSets");
-        if (color.Length != numSets)
-            throw new System.ArgumentException("Length of colors must be numSets");
+        if (data == null || data.Length == 0 || data[0] == null)
+            throw new System.ArgumentException("Invalid data argument (data must contain at least one non null array");
+
+        var numSamples = data[0].Length;
+        /*
+        for (int i = 1; i < data.Length; ++i)
+        {
+            if (data[i] == null || data[i].Length != numSamples)
+                throw new System.ArgumentException("Length of data of all arrays must be the same");
+        }
+        */
+
+        if (color.Length != data.Length)
+            throw new System.ArgumentException("Length of colors must match number of datasets");
 
         var dataLength = data.Length;
-        var numSamples = dataLength / numSets;
 
         float maxData = float.MinValue;
 
@@ -295,8 +319,8 @@ public class DebugOverlay : MonoBehaviour
         {
             float sum = 0;
 
-            for (var j = 0; j < numSets; j++)
-                sum += data[i * numSets + j];
+            foreach(var dataset in data)
+                sum += dataset[i];
 
             if (sum > maxData)
                 maxData = sum;
@@ -312,10 +336,10 @@ public class DebugOverlay : MonoBehaviour
         for (var i = 0; i < numSamples; i++)
         {
             stackOffset = 0;
-            for (var j = 0; j < numSets; j++)
+            for (var j = 0; j < data.Length; j++)
             {
                 var c = color[j];
-                float d = data[((i + startSample) % numSamples) * numSets + j];
+                float d = data[j][(i + startSample) % numSamples];
                 float barHeight = d * scale; // now in [0, h]
                 var pos_x = m_OriginX + x + dx * i;
                 var pos_y = m_OriginY + y + h - barHeight - stackOffset;
