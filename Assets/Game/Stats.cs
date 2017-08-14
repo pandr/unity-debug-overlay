@@ -26,7 +26,9 @@ public class Stats : IGameSystem
 
     private void CmdShowstats(string[] args)
     {
-        m_ShowStats = (m_ShowStats + 1) % 3;
+        if (args.Length != 1)
+            return;
+        int.TryParse(args[0], out m_ShowStats);
     }
 
     void CalcStatistics(float[] data, out float mean, out float variance, out float minValue, out float maxValue)
@@ -69,6 +71,8 @@ public class Stats : IGameSystem
         DebugOverlay.Write(1, 0, "FPS:{0,6:###.##}", 1.0f / Time.deltaTime);
         fpsHistory[Time.frameCount % fpsHistory.Length] = 1.0f / Time.deltaTime;
         DebugOverlay.DrawGraph(1, 1, 9, 1.5f, fpsHistory, Time.frameCount % fpsHistory.Length, Color.green);
+
+        DebugOverlay.Write(30, 0, "Open console (F12) and type: \"showstats 2\" for more graphs");
       
         if (m_ShowStats < 2)
             return;
