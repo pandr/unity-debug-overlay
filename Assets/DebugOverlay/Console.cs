@@ -5,6 +5,10 @@ using UnityEngine;
 
 public class Console : IGameSystem
 {
+    const int k_BufferSize = 80 * 25 * 1000; // arbitrarily set to 1000 scroll back lines at 80x25
+    const int k_InputBufferSize = 512;
+    const int k_HistorySize = 1000; // lines of history
+
     int m_Width;
     int m_Height;
     int m_NumLines;
@@ -20,12 +24,13 @@ public class Console : IGameSystem
     int m_CursorPos = 0;
     int m_InputFieldLength = 0;
 
+    string[] m_History = new string[k_HistorySize];
+    int m_HistoryDisplayIndex = 0;
+    int m_HistoryNextIndex = 0;
+
     Color m_BackgroundColor = new Color(0, 0, 0, 0.9f);
     Vector4 m_TextColor = new Vector4(0.7f, 1.0f, 0.7f, 1.0f);
     Color m_CursorCol = new Color(0, 0.8f, 0.2f, 0.5f);
-
-    const int k_BufferSize = 80 * 25 * 1000; // arbitrarily set to 1000 scroll back lines at 80x25
-    const int k_InputBufferSize = 512;
 
     System.UInt32[] m_ConsoleBuffer;
 
@@ -127,9 +132,15 @@ public class Console : IGameSystem
                 Backspace();
             else if (Input.GetKeyDown(KeyCode.Tab))
                 TabComplete();
+            else if (Input.GetKeyDown(KeyCode.UpArrow))
+                HistoryPrev();
+            else if (Input.GetKeyDown(KeyCode.DownArrow))
+                HistoryNext();
             else if (Input.GetKeyDown(KeyCode.Return))
             {
-                ExecuteCommand(new string(m_InputFieldBuffer, 0, m_InputFieldLength));
+                var s = new string(m_InputFieldBuffer, 0, m_InputFieldLength);
+                HistoryStore(s);
+                ExecuteCommand(s);
                 m_InputFieldLength = 0;
                 m_CursorPos = 0;
             }
@@ -141,6 +152,45 @@ public class Console : IGameSystem
                     Type(ch[i]);
             }
         }
+    }
+
+    void HistoryPrev()
+    {
+        if (m_HistoryDisplayIndex == 0 || m_HistoryNextIndex - m_HistoryDisplayIndex >= m_History.Length - 1)
+            return;
+
+        if (m_HistoryDisplayIndex == m_HistoryNextIndex)
+            m_History[m_HistoryNextIndex % m_History.Length] = new string(m_InputFieldBuffer, 0, m_InputFieldLength);
+
+        m_HistoryDisplayIndex--;
+
+        var s = m_History[m_HistoryDisplayIndex % m_History.Length];
+
+        s.CopyTo(0, m_InputFieldBuffer, 0, s.Length);
+        m_InputFieldLength = s.Length;
+        m_CursorPos = s.Length;
+    }
+
+    void HistoryNext()
+    {
+        if (m_HistoryDisplayIndex == m_HistoryNextIndex)
+            return;
+
+
+        m_HistoryDisplayIndex++;
+
+        var s = m_History[m_HistoryDisplayIndex % m_History.Length];
+
+        s.CopyTo(0, m_InputFieldBuffer, 0, s.Length);
+        m_InputFieldLength = s.Length;
+        m_CursorPos = s.Length;
+    }
+
+    void HistoryStore(string cmd)
+    {
+        m_History[m_HistoryNextIndex % m_History.Length] = cmd;
+        m_HistoryNextIndex++;
+        m_HistoryDisplayIndex = m_HistoryNextIndex;
     }
 
     void ExecuteCommand(string command)
