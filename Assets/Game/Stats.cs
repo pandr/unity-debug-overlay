@@ -69,6 +69,8 @@ public class Stats : IGameSystem
         DebugOverlay.Write(1, 0, "FPS:{0,6:###.##}", 1.0f / Time.deltaTime);
         fpsHistory[Time.frameCount % fpsHistory.Length] = 1.0f / Time.deltaTime;
         DebugOverlay.DrawGraph(1, 1, 9, 1.5f, fpsHistory, Time.frameCount % fpsHistory.Length, Color.green);
+
+        DebugOverlay.Write(30, 0, "Open console (F12) and type: \"showstats\" to toggle graphs");
       
         if (m_ShowStats < 2)
             return;
