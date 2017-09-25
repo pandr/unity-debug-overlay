@@ -118,7 +118,7 @@ public class Console : IGameSystem
             return;
 
         Scroll((int)Input.mouseScrollDelta.y);
-        if (Input.anyKeyDown)
+        if (Input.anyKey)
         {
             if (Input.GetKeyDown(KeyCode.LeftArrow) && m_CursorPos > 0)
                 m_CursorPos--;
@@ -128,28 +128,32 @@ public class Console : IGameSystem
                 m_CursorPos = 0;
             else if (Input.GetKeyDown(KeyCode.End) || (Input.GetKeyDown(KeyCode.E) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))))
                 m_CursorPos = m_InputFieldLength;
-            else if (Input.GetKeyDown(KeyCode.Backspace))
-                Backspace();
             else if (Input.GetKeyDown(KeyCode.Tab))
                 TabComplete();
             else if (Input.GetKeyDown(KeyCode.UpArrow))
                 HistoryPrev();
             else if (Input.GetKeyDown(KeyCode.DownArrow))
                 HistoryNext();
-            else if (Input.GetKeyDown(KeyCode.Return))
-            {
-                var s = new string(m_InputFieldBuffer, 0, m_InputFieldLength);
-                HistoryStore(s);
-                ExecuteCommand(s);
-                m_InputFieldLength = 0;
-                m_CursorPos = 0;
-            }
             else
             {
-                // TODO replace with garbage free alternative (perhaps impossible until new input system)
-                var ch = Input.inputString;
-                for (var i = 0; i < ch.Length; i++)
-                    Type(ch[i]);
+                // TODO replace with garbage free alternative (perhaps impossible until new input system?)
+                var inputString = Input.inputString;
+                for (var i = 0; i < inputString.Length; i++)
+                {
+                    var ch = inputString[i];
+                    if (ch == '\b')
+                        Backspace();
+                    else if (ch == '\n' || ch == '\r')
+                    {
+                        var s = new string(m_InputFieldBuffer, 0, m_InputFieldLength);
+                        HistoryStore(s);
+                        ExecuteCommand(s);
+                        m_InputFieldLength = 0;
+                        m_CursorPos = 0;
+                    }
+                    else
+                        Type(ch);
+                }
             }
         }
     }

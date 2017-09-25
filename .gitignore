@@ -4,6 +4,7 @@
 /[Bb]uild/
 /[Bb]uilds/
 /[Aa]uto[Bb]uild/
+/[Pp]ackages/
 
 /Assets/AssetStoreTools*
 /Assets/Editor/GitHub.meta
