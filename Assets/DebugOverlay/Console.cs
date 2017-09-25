@@ -51,18 +51,18 @@ public class Console : IGameSystem
 
     public void Init()
     {
-        Init(80, 25);
+        Init(null);
     }
 
-    public void Init(int width, int height)
+    public void Init(DebugOverlay debugOverlay)
     {
-        Resize(width, height);
+        m_DebugOverlay = debugOverlay != null ? debugOverlay : DebugOverlay.instance;
+        Resize(m_DebugOverlay.width, m_DebugOverlay.height);
         Clear();
     }
 
     public void Shutdown()
     {
-
     }
 
     public delegate void CommandDelegate(string[] args);
@@ -235,7 +235,7 @@ public class Console : IGameSystem
             return;
 
         var yoffset = -(float)m_Height * (1.0f - m_ConsoleFoldout);
-        DebugOverlay.DrawRect(0, 0 + yoffset, m_Width, m_Height, m_BackgroundColor);
+        m_DebugOverlay._DrawRect(0, 0 + yoffset, m_Width, m_Height, m_BackgroundColor);
 
         var line = m_LastVisibleLine;
         if ((m_LastVisibleLine == m_LastLine) && (m_LastColumn == 0))
@@ -260,7 +260,7 @@ public class Console : IGameSystem
                     col.z = (float)((icol >> 8) & 0xff) / 255.0f;
                 }
                 if (c != '\0')
-                    DebugOverlay.instance.AddQuad(j, m_Height - 2 - i + yoffset, 1, 1, ch, col);
+                    m_DebugOverlay.AddQuad(j, m_Height - 2 - i + yoffset, 1, 1, ch, col);
             }
         }
 
@@ -271,9 +271,9 @@ public class Console : IGameSystem
         {
             char c = m_InputFieldBuffer[i];
             if (c != '\0')
-                DebugOverlay.instance.AddQuad(i - horizontalScroll, m_Height - 1 + yoffset, 1, 1, c, m_TextColor);
+                m_DebugOverlay.AddQuad(i - horizontalScroll, m_Height - 1 + yoffset, 1, 1, c, m_TextColor);
         }
-        DebugOverlay.instance.AddQuad(m_CursorPos - horizontalScroll, m_Height - 1 + yoffset, 1, 1, '\0', m_CursorCol);
+        m_DebugOverlay.AddQuad(m_CursorPos - horizontalScroll, m_Height - 1 + yoffset, 1, 1, '\0', m_CursorCol);
     }
 
     void NewLine()
@@ -430,4 +430,5 @@ public class Console : IGameSystem
         return minl;
     }
 
+    DebugOverlay m_DebugOverlay;
 }

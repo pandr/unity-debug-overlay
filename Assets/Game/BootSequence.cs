@@ -17,6 +17,8 @@ public class BootSequence : MonoBehaviour
         DontDestroyOnLoad(gameObject);
         m_Game = new Game();
         m_Game.Init();
+        wfeof = new WaitForEndOfFrame();
+        StartCoroutine(EndOfFrame());
     }
 
     void OnDestroy()
@@ -24,8 +26,11 @@ public class BootSequence : MonoBehaviour
         m_Game.Shutdown();
     }
 
+    void FixedUpdate() { m_Game.FixedUpdate(); }
     void Update()      { m_Game.Update(); }
     void LateUpdate()  { m_Game.LateUpdate(); }
-    void FixedUpdate() { m_Game.FixedUpdate(); }
+    IEnumerator EndOfFrame() { while(true) { yield return wfeof; m_Game.EndOfFrame(); } }
+
+    WaitForEndOfFrame wfeof;
 }
 

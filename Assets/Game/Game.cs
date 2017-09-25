@@ -22,7 +22,7 @@ public class Game
 {
     private static Game _instance;
 
-    static public Console      console      { get { return _instance.m_Console; } }
+    static public Console console { get { return _instance.m_Console; } }
     static public DebugOverlay debugOverlay { get { return _instance.m_DebugOverlay; } }
 
     DebugOverlay m_DebugOverlay;
@@ -34,12 +34,11 @@ public class Game
         Debug.Assert(_instance == null);
         _instance = this;
 
-        m_DebugOverlay = GameObject.Instantiate(Resources.Load<DebugOverlay>("DebugOverlay"));
-        GameObject.DontDestroyOnLoad(m_DebugOverlay);
-        m_DebugOverlay.Init();
+        m_DebugOverlay = new DebugOverlay();
+        m_DebugOverlay.Init(120, 36);
 
         m_Console = new Console();
-        m_Console.Init(DebugOverlay.Width, DebugOverlay.Height);
+        m_Console.Init();
 
         m_Console.AddCommand("quit", CmdQuit, "Quit game");
 
@@ -88,5 +87,10 @@ public class Game
 
     public void FixedUpdate()
     {
+    }
+
+    public void EndOfFrame()
+    {
+        m_DebugOverlay.Render();
     }
 }

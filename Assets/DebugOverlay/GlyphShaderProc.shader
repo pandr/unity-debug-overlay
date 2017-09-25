@@ -63,6 +63,7 @@ Shader "Instanced/GlyphShaderProc" {
 
 				// Generate position
 				float2 p = (v_pos*scale + pos_uv.xy) * scales.xy;
+				p.y = 1.0 - p.y;
 				p = float2(-1, -1) + p * 2.0;
 
 				v2f o;

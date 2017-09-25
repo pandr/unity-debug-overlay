@@ -1,40 +1,29 @@
 using UnityEngine;
 using System.Collections;
 
-public class DebugOverlay : MonoBehaviour
+public class DebugOverlay
 {
-    [Header("Overlay size")]
-    [SerializeField]
-    int width = 80;
-    [SerializeField]
-    int height = 25;
-
-    [Header("Font material info")]
-    public Material instanceMaterialProc;
-    [Tooltip("Number of columns of glyphs on texture")]
-    public int charCols = 30;
-    [Tooltip("Number of rows of glyphs on texture")]
-    public int charRows = 16;
-    [Tooltip("Width in pixels of each glyph")]
-    public int cellWidth = 32;
-    [Tooltip("Height in pixels of each glyph")]
-    public int cellHeight = 32;
-
-    public Shader lineShaderProc;
+    public int width = 80;
+    public int height = 25;
 
     public static DebugOverlay instance;
+    static DebugOverlayResources resources;
 
     public static int Width { get { return instance.width; } }
     public static int Height { get { return instance.height; } }
 
-    void Awake()
+    public void Init(int w, int h)
     {
-        m_LineMaterial = new Material(lineShaderProc);
-    }
+        if(resources == null)
+        {
+            resources = Resources.Load<DebugOverlayResources>("DebugOverlayResources");
+            Debug.Assert(resources != null, "Unable to load DebugOverlayResources");
+        }
+        if (instance == null)
+            instance = this;
 
-    public void Init()
-    {
-        instance = this;
+        width = w;
+        height = h;
     }
 
     public void Shutdown()
@@ -49,7 +38,8 @@ public class DebugOverlay : MonoBehaviour
         m_LineInstanceBuffer = null;
         m_LineInstanceData = null;
 
-        instance = null;
+        if (instance == this)
+            instance = null;
     }
 
     public void TickLateUpdate()
@@ -64,7 +54,7 @@ public class DebugOverlay : MonoBehaviour
             }
 
             m_QuadInstanceBuffer = new ComputeBuffer(m_QuadInstanceData.Length, 16 + 16 + 16);
-            instanceMaterialProc.SetBuffer("positionBuffer", m_QuadInstanceBuffer);
+            resources.glyphMaterial.SetBuffer("positionBuffer", m_QuadInstanceBuffer);
         }
 
         if (m_LineInstanceBuffer == null || m_LineInstanceBuffer.count != m_LineInstanceData.Length)
@@ -76,7 +66,7 @@ public class DebugOverlay : MonoBehaviour
             }
 
             m_LineInstanceBuffer = new ComputeBuffer(m_LineInstanceData.Length, 16 + 16);
-            m_LineMaterial.SetBuffer("positionBuffer", m_LineInstanceBuffer);
+            resources.lineMaterial.SetBuffer("positionBuffer", m_LineInstanceBuffer);
         }
 
         m_QuadInstanceBuffer.SetData(m_QuadInstanceData, 0, 0, m_NumQuadsUsed);
@@ -85,21 +75,17 @@ public class DebugOverlay : MonoBehaviour
         m_LineInstanceBuffer.SetData(m_LineInstanceData, 0, 0, m_NumLinesUsed);
         m_NumLinesToDraw = m_NumLinesUsed;
 
-        instanceMaterialProc.SetVector("scales", new Vector4(
+        resources.glyphMaterial.SetVector("scales", new Vector4(
             1.0f / width,
             1.0f / height,
-            (float)cellWidth / instanceMaterialProc.mainTexture.width,
-            (float)cellHeight / instanceMaterialProc.mainTexture.height));
+            (float)resources.cellWidth / resources.glyphMaterial.mainTexture.width,
+            (float)resources.cellHeight / resources.glyphMaterial.mainTexture.height));
 
-        m_LineMaterial.SetVector("scales", new Vector4(1.0f / width, 1.0f / height, 1.0f / 1280.0f, 1.0f / 720.0f));
+        resources.lineMaterial.SetVector("scales", new Vector4(1.0f / width, 1.0f / height, 1.0f / 1280.0f, 1.0f / 720.0f));
 
         _Clear();
     }
 
-    /// <summary>
-    /// Set color of text. 
-    /// </summary>
-    /// <param name="col"></param>
     public static void SetColor(Color col)
     {
         if (instance == null)
@@ -351,7 +337,7 @@ public class DebugOverlay : MonoBehaviour
         }
     }
 
-    void _DrawRect(float x, float y, float w, float h, Color col)
+    public void _DrawRect(float x, float y, float w, float h, Color col)
     {
         AddQuad(m_OriginX + x, m_OriginY + y, w, h, '\0', col);
     }
@@ -370,11 +356,11 @@ public class DebugOverlay : MonoBehaviour
         _DrawText(x, y, ref _buf, num);
     }
 
-    void OnPostRender()
+    public void Render()
     {
-        m_LineMaterial.SetPass(0);
+        resources.lineMaterial.SetPass(0);
         Graphics.DrawProcedural(MeshTopology.Triangles, m_NumLinesToDraw * 6, 1);
-        instanceMaterialProc.SetPass(0);
+        resources.glyphMaterial.SetPass(0);
         Graphics.DrawProcedural(MeshTopology.Triangles, m_NumQuadsToDraw * 6, 1);
     }
 
@@ -412,8 +398,8 @@ public class DebugOverlay : MonoBehaviour
         {
             if (c != '\0')
             {
-                d->positionAndUV.z = (c - 32) % charCols;
-                d->positionAndUV.w = (c - 32) / charCols;
+                d->positionAndUV.z = (c - 32) % resources.charCols;
+                d->positionAndUV.w = (c - 32) / resources.charCols;
                 col.w = 0.0f;
             }
             else
@@ -461,6 +447,4 @@ public class DebugOverlay : MonoBehaviour
     int m_NumLinesToDraw = 0;
     QuadInstanceData[] m_QuadInstanceData = new QuadInstanceData[128];
     LineInstanceData[] m_LineInstanceData = new LineInstanceData[128];
-
-    Material m_LineMaterial;
 }
