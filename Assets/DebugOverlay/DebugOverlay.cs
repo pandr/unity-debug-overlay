@@ -113,13 +113,15 @@ public class DebugOverlay
     {
         if (instance == null)
             return;
-        instance._Write(x, y, format, new ArgList0());
+        var l = StringFormatter.Write(ref _buf, 0, format);
+        instance._DrawText(x, y, ref _buf, l);
     }
     public static void Write<T>(float x, float y, string format, T arg)
     {
         if (instance == null)
             return;
-        instance._Write(x, y, format, new ArgList1<T>(arg));
+        var l = StringFormatter.Write<T>(ref _buf, 0, format, arg);
+        instance._DrawText(x, y, ref _buf, l);
     }
     public static void Write<T>(Color col, float x, float y, string format, T arg)
     {
@@ -127,27 +129,31 @@ public class DebugOverlay
             return;
         Color c = instance.m_CurrentColor;
         instance.m_CurrentColor = col;
-        instance._Write(x, y, format, new ArgList1<T>(arg));
+        var l = StringFormatter.Write(ref _buf, 0, format, arg);
+        instance._DrawText(x, y, ref _buf, l);
         instance.m_CurrentColor = c;
     }
     public static void Write<T0, T1>(float x, float y, string format, T0 arg0, T1 arg1)
     {
         if (instance == null)
             return;
-        instance._Write(x, y, format, new ArgList2<T0, T1>(arg0, arg1));
+        var l = StringFormatter.Write(ref _buf, 0, format, arg0, arg1);
+        instance._DrawText(x, y, ref _buf, l);
     }
     public static void Write<T0, T1, T2>(float x, float y, string format, T0 arg0, T1 arg1, T2 arg2)
     {
         if (instance == null)
             return;
-        instance._Write(x, y, format, new ArgList3<T0, T1, T2>(arg0, arg1, arg2));
+        var l = StringFormatter.Write(ref _buf, 0, format, arg0, arg1, arg2);
+        instance._DrawText(x, y, ref _buf, l);
     }
 
     public static void Write<T0, T1, T2, T3>(float x, float y, string format, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
         if (instance == null)
             return;
-        instance._Write(x, y, format, new ArgList4<T0, T1, T2, T3>(arg0, arg1, arg2, arg3));
+        var l = StringFormatter.Write(ref _buf, 0, format, arg0, arg1, arg2, arg3);
+        instance._DrawText(x, y, ref _buf, l);
     }
 
     // Draw a histogram of one set of data. Data must contain non-negative datapoints.
@@ -349,12 +355,7 @@ public class DebugOverlay
         SetOrigin(0, 0);
     }
 
-    char[] _buf = new char[1024];
-    void _Write<T>(float x, float y, string format, T argList) where T : IArgList
-    {
-        var num = StringFormatter.__Write<T>(ref _buf, 0, format, argList);
-        _DrawText(x, y, ref _buf, num);
-    }
+    static char[] _buf = new char[1024];
 
     public void Render()
     {

@@ -336,28 +336,28 @@ public class Console : IGameSystem
         }
     }
 
-    char[] _buf = new char[1024];
-    public void _Write<T>(string format, T argList) where T : IArgList
-    {
-        var length = StringFormatter.__Write<T>(ref _buf, 0, format, argList);
-        _Write(_buf, length);
-    }
+    static char[] _buf = new char[1024];
 
     public void Write(string format)
     {
-        _Write(format, new ArgList0());
+        var l = StringFormatter.Write(ref _buf, 0, format);
+        _Write(_buf, l);
     }
+
     public void Write<T>(string format, T arg)
     {
-        _Write(format, new ArgList1<T>(arg));
+        var l = StringFormatter.Write(ref _buf, 0, format, arg);
+        _Write(_buf, l);
     }
     public void Write<T0, T1>(string format, T0 arg0, T1 arg1)
     {
-        _Write(format, new ArgList2<T0, T1>(arg0, arg1));
+        var l = StringFormatter.Write(ref _buf, 0, format, arg0, arg1);
+        _Write(_buf, l);
     }
     public void Write<T0, T1, T2>(string format, T0 arg0, T1 arg1, T2 arg2)
     {
-        _Write(format, new ArgList3<T0, T1, T2>(arg0, arg1, arg2));
+        var l = StringFormatter.Write(ref _buf, 0, format, arg0, arg1, arg2);
+        _Write(_buf, l);
     }
 
     void Type(char c)

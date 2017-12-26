@@ -124,110 +124,39 @@ public unsafe class Converter : IConverter<int>, IConverter<float>, IConverter<s
     }
 }
 
-public unsafe interface IArgList
-{
-    int Count { get; }
-
-    void Format(ref char* dst, char* end, int argIndex, FormatSpec formatSpec);
-}
-
-public unsafe struct ArgList0 : IArgList
-{
-    public int Count { get { return 0; } }
-    public void Format(ref char* dst, char* end, int argIndex, FormatSpec formatSpec)
-    {
-    }
-}
-public unsafe struct ArgList1<T0> : IArgList
-{
-    public int Count { get { return 1; } }
-    T0 t0;
-    public ArgList1(T0 a0)
-    {
-        t0 = a0;
-    }
-    public void Format(ref char* dst, char* end, int argIndex, FormatSpec formatSpec)
-    {
-        switch (argIndex)
-        {
-            case 0: (Converter.instance as IConverter<T0>).Convert(ref dst, end, t0, formatSpec); break;
-        }
-    }
-}
-public unsafe struct ArgList2<T0, T1> : IArgList
-{
-    public int Count { get { return 2; } }
-    T0 t0;
-    T1 t1;
-    public ArgList2(T0 a0, T1 a1)
-    {
-        t0 = a0;
-        t1 = a1;
-    }
-    public void Format(ref char* dst, char* end, int argIndex, FormatSpec formatSpec)
-    {
-        switch (argIndex)
-        {
-            case 0: (Converter.instance as IConverter<T0>).Convert(ref dst, end, t0, formatSpec); break;
-            case 1: (Converter.instance as IConverter<T1>).Convert(ref dst, end, t1, formatSpec); break;
-        }
-    }
-}
-public unsafe struct ArgList3<T0, T1, T2> : IArgList
-{
-    public int Count { get { return 3; } }
-    T0 t0;
-    T1 t1;
-    T2 t2;
-    public ArgList3(T0 a0, T1 a1, T2 a2)
-    {
-        t0 = a0;
-        t1 = a1;
-        t2 = a2;
-    }
-    public void Format(ref char* dst, char* end, int argIndex, FormatSpec formatSpec)
-    {
-        switch (argIndex)
-        {
-            case 0: (Converter.instance as IConverter<T0>).Convert(ref dst, end, t0, formatSpec); break;
-            case 1: (Converter.instance as IConverter<T1>).Convert(ref dst, end, t1, formatSpec); break;
-            case 2: (Converter.instance as IConverter<T2>).Convert(ref dst, end, t2, formatSpec); break;
-        }
-    }
-}
-
-public unsafe struct ArgList4<T0, T1, T2, T3> : IArgList
-{
-    public int Count { get { return 4; } }
-    T0 t0;
-    T1 t1;
-    T2 t2;
-    T3 t3;
-    public ArgList4(T0 a0, T1 a1, T2 a2, T3 a3)
-    {
-        t0 = a0;
-        t1 = a1;
-        t2 = a2;
-        t3 = a3;
-    }
-    public void Format(ref char* dst, char* end, int argIndex, FormatSpec formatSpec)
-    {
-        switch (argIndex)
-        {
-            case 0: (Converter.instance as IConverter<T0>).Convert(ref dst, end, t0, formatSpec); break;
-            case 1: (Converter.instance as IConverter<T1>).Convert(ref dst, end, t1, formatSpec); break;
-            case 2: (Converter.instance as IConverter<T2>).Convert(ref dst, end, t2, formatSpec); break;
-            case 3: (Converter.instance as IConverter<T3>).Convert(ref dst, end, t3, formatSpec); break;
-        }
-    }
-}
-
 /// <summary>
 /// Garbage free string formatter
 /// </summary>
 public static unsafe class StringFormatter
 {
-    public static int __Write<T>(ref char[] dst, int destIdx, string format, T argList) where T : IArgList
+    private class NoArg {}
+
+    public static int Write(ref char[] dst, int destIdx, string format)
+    {
+        return Write<NoArg, NoArg, NoArg, NoArg, NoArg, NoArg>(ref dst, destIdx, format, null, null, null, null, null, null);
+    }
+    public static int Write<T0>(ref char[] dst, int destIdx, string format, T0 arg0)
+    {
+        return Write<T0, NoArg, NoArg, NoArg, NoArg, NoArg>(ref dst, destIdx, format, arg0, null, null, null, null, null);
+    }
+    public static int Write<T0,T1>(ref char[] dst, int destIdx, string format, T0 arg0, T1 arg1)
+    {
+        return Write<T0, T1, NoArg, NoArg, NoArg, NoArg>(ref dst, destIdx, format, arg0, arg1, null, null, null, null);
+    }
+    public static int Write<T0,T1,T2>(ref char[] dst, int destIdx, string format, T0 arg0, T1 arg1, T2 arg2)
+    {
+        return Write<T0, T1, T2, NoArg, NoArg, NoArg>(ref dst, destIdx, format, arg0, arg1, arg2, null, null, null);
+    }
+    public static int Write<T0,T1,T2,T3>(ref char[] dst, int destIdx, string format, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+    {
+        return Write<T0, T1, T2, T3, NoArg, NoArg>(ref dst, destIdx, format, arg0, arg1, arg2, arg3, null, null);
+    }
+    public static int Write<T0,T1,T2,T3,T4>(ref char[] dst, int destIdx, string format, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    {
+        return Write<T0, T1, T2, T3, T4, NoArg>(ref dst, destIdx, format, arg0, arg1, arg2, arg3, arg4, null);
+    }
+
+    public static int Write<T0, T1, T2, T3, T4, T5>(ref char[] dst, int destIdx, string format, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         int written = 0;
         fixed (char* p = format, d = &dst[0])
@@ -299,10 +228,17 @@ public static unsafe class StringFormatter
                     else
                         src++;
 
-                    if (argNum < 0 || argNum >= argList.Count)
-                        throw new IndexOutOfRangeException(argNum.ToString());
-
-                    argList.Format(ref dest, end, argNum, s);
+                    switch(argNum)
+                    {
+                        case 0: ((IConverter<T0>)Converter.instance).Convert(ref dest, end, arg0, s); break;
+                        case 1: ((IConverter<T1>)Converter.instance).Convert(ref dest, end, arg1, s); break;
+                        case 2: ((IConverter<T2>)Converter.instance).Convert(ref dest, end, arg2, s); break;
+                        case 3: ((IConverter<T3>)Converter.instance).Convert(ref dest, end, arg3, s); break;
+                        case 4: ((IConverter<T4>)Converter.instance).Convert(ref dest, end, arg4, s); break;
+                        case 5: ((IConverter<T5>)Converter.instance).Convert(ref dest, end, arg5, s); break;
+                        default:
+                            throw new IndexOutOfRangeException(argNum.ToString());
+                    }
                 }
                 else
                 {
