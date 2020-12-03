@@ -360,9 +360,9 @@ public class DebugOverlay
     public void Render()
     {
         resources.lineMaterial.SetPass(0);
-        Graphics.DrawProcedural(MeshTopology.Triangles, m_NumLinesToDraw * 6, 1);
+        Graphics.DrawProceduralNow(MeshTopology.Triangles, m_NumLinesToDraw * 6, 1);
         resources.glyphMaterial.SetPass(0);
-        Graphics.DrawProcedural(MeshTopology.Triangles, m_NumQuadsToDraw * 6, 1);
+        Graphics.DrawProceduralNow(MeshTopology.Triangles, m_NumQuadsToDraw * 6, 1);
     }
 
     unsafe void AddLine(float x1, float y1, float x2, float y2, Vector4 col)
