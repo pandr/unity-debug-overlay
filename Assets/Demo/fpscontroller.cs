@@ -37,6 +37,9 @@ public class fpscontroller : MonoBehaviour
 
     void Update()
     {
+        if(Game.console.IsOpen())
+            return;
+
         // Turn player
         var turn_player = new Vector3(0, Mouse.current.delta.x.value, 0);
 

@@ -46,6 +46,11 @@ public class Console : IGameSystem
         Keyboard.current.onTextInput += OnTextInput;
     }
 
+    public bool IsOpen()
+    {
+        return m_ConsoleOpen;
+    }
+
     private void CmdDumpScene(string[] args)
     {
         var go = new List<GameObject>();
