@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class Console : IGameSystem
 {
@@ -27,6 +29,7 @@ public class Console : IGameSystem
     string[] m_History = new string[k_HistorySize];
     int m_HistoryDisplayIndex = 0;
     int m_HistoryNextIndex = 0;
+    List<char> m_InputChars = new List<char>();
 
     Color m_BackgroundColor = new Color(0, 0, 0, 0.9f);
     Vector4 m_TextColor = new Vector4(0.7f, 1.0f, 0.7f, 1.0f);
@@ -39,6 +42,40 @@ public class Console : IGameSystem
         m_ConsoleBuffer = new System.UInt32[k_BufferSize];
         m_InputFieldBuffer = new char[k_InputBufferSize];
         AddCommand("help", CmdHelp, "Show available commands");
+        AddCommand("dump", CmdDumpScene, "Dump scene hierarchy in active scene");
+        Keyboard.current.onTextInput += OnTextInput;
+    }
+
+    private void CmdDumpScene(string[] args)
+    {
+        var go = new List<GameObject>();
+        UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects(go);
+        foreach(var g in go)
+        {
+            RecurDump(g, 0);
+        }
+    }
+
+    private void RecurDump(GameObject go, int depth)
+    {
+        Write("{0}{1}\n", new string(' ', depth), go.name);
+        for (var i = 0; i < go.transform.childCount; i++)
+        {
+            RecurDump(go.transform.GetChild(i).gameObject, depth + 1);
+        }
+    }
+
+    private void OnTextInput(char c)
+    {
+        if (!m_ConsoleOpen)
+            return;
+
+        if(Char.IsControl(c) && c != '\n' && c != '\r' && c != '\b')
+        {
+            return;
+        }
+
+        m_InputChars.Add(c);
     }
 
     void CmdHelp(string[] args)
@@ -107,7 +144,7 @@ public class Console : IGameSystem
 
     public void TickUpdate()
     {
-        if (Input.GetKeyDown(KeyCode.F12))
+        if(Keyboard.current.f12Key.wasPressedThisFrame)
         {
             m_ConsoleOpen = !m_ConsoleOpen;
             m_ConsoleFoldoutDest = m_ConsoleOpen ? 1.0f : 0.0f;
@@ -117,44 +154,41 @@ public class Console : IGameSystem
         if (!m_ConsoleOpen)
             return;
 
-        Scroll((int)Input.mouseScrollDelta.y);
-        if (Input.anyKey)
+        Scroll((int)Mouse.current.scroll.ReadValue().y);
+
+        if (Keyboard.current.leftArrowKey.wasPressedThisFrame && m_CursorPos > 0)
+            m_CursorPos--;
+        else if (Keyboard.current.rightArrowKey.wasPressedThisFrame && m_CursorPos < m_InputFieldLength)
+            m_CursorPos++;
+        else if (Keyboard.current.homeKey.wasPressedThisFrame || (Keyboard.current.aKey.wasPressedThisFrame && (Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed)))
+            m_CursorPos = 0;
+        else if (Keyboard.current.endKey.wasPressedThisFrame || (Keyboard.current.eKey.wasPressedThisFrame && (Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed)))
+            m_CursorPos = m_InputFieldLength;
+        else if (Keyboard.current.tabKey.wasPressedThisFrame)
+            TabComplete();
+        else if (Keyboard.current.upArrowKey.wasPressedThisFrame)
+            HistoryPrev();
+        else if (Keyboard.current.downArrowKey.wasPressedThisFrame)
+            HistoryNext();
+        else
         {
-            if (Input.GetKeyDown(KeyCode.LeftArrow) && m_CursorPos > 0)
-                m_CursorPos--;
-            else if (Input.GetKeyDown(KeyCode.RightArrow) && m_CursorPos < m_InputFieldLength)
-                m_CursorPos++;
-            else if (Input.GetKeyDown(KeyCode.Home) || (Input.GetKeyDown(KeyCode.A) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))))
-                m_CursorPos = 0;
-            else if (Input.GetKeyDown(KeyCode.End) || (Input.GetKeyDown(KeyCode.E) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))))
-                m_CursorPos = m_InputFieldLength;
-            else if (Input.GetKeyDown(KeyCode.Tab))
-                TabComplete();
-            else if (Input.GetKeyDown(KeyCode.UpArrow))
-                HistoryPrev();
-            else if (Input.GetKeyDown(KeyCode.DownArrow))
-                HistoryNext();
-            else
+            for (var i = 0; i < m_InputChars.Count; i++)
             {
-                // TODO replace with garbage free alternative (perhaps impossible until new input system?)
-                var inputString = Input.inputString;
-                for (var i = 0; i < inputString.Length; i++)
+                var ch = m_InputChars[i];
+                if (ch == '\b')
+                    Backspace();
+                else if (ch == '\n' || ch == '\r')
                 {
-                    var ch = inputString[i];
-                    if (ch == '\b')
-                        Backspace();
-                    else if (ch == '\n' || ch == '\r')
-                    {
-                        var s = new string(m_InputFieldBuffer, 0, m_InputFieldLength);
-                        HistoryStore(s);
-                        ExecuteCommand(s);
-                        m_InputFieldLength = 0;
-                        m_CursorPos = 0;
-                    }
-                    else
-                        Type(ch);
+                    var s = new string(m_InputFieldBuffer, 0, m_InputFieldLength);
+                    HistoryStore(s);
+                    ExecuteCommand(s);
+                    m_InputFieldLength = 0;
+                    m_CursorPos = 0;
                 }
+                else
+                    Type(ch);
             }
+            m_InputChars.Clear();
         }
     }
 

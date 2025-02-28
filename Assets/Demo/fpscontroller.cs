@@ -11,6 +11,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class fpscontroller : MonoBehaviour
 {
@@ -24,6 +25,7 @@ public class fpscontroller : MonoBehaviour
     public float player_air_accel = 30.0f;
     public float player_speed = 7.0f;
 
+    private float cam_yaw = 0.0f;
     private Vector3 velocity = Vector3.zero;
 
     CharacterController cc;
@@ -36,7 +38,8 @@ public class fpscontroller : MonoBehaviour
     void Update()
     {
         // Turn player
-        var turn_player = new Vector3(0, Input.GetAxisRaw("Mouse X"), 0);
+        var turn_player = new Vector3(0, Mouse.current.delta.x.value, 0);
+
         turn_player = turn_player * mouse_sensitivity * Time.deltaTime;
         transform.localEulerAngles += turn_player;
 
@@ -53,7 +56,11 @@ public class fpscontroller : MonoBehaviour
         var accel = isGrounded ? player_accel : player_air_accel;
 
         // WASD movement
-        var move = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical"));
+        float horizontal = Keyboard.current.aKey.isPressed ? -1.0f : 0.0f;
+        horizontal += Keyboard.current.dKey.isPressed ? 1.0f : 0.0f;
+        float vertical = Keyboard.current.sKey.isPressed ? -1.0f : 0.0f;
+        vertical += Keyboard.current.wKey.isPressed ? 1.0f : 0.0f;
+        var move = new Vector3(horizontal, 0, vertical);
         var moveMagnitude = move.magnitude;
         if (moveMagnitude > 1.0f)
             move /= moveMagnitude;
@@ -87,14 +94,14 @@ public class fpscontroller : MonoBehaviour
         cc.Move(velocity * Time.deltaTime);
 
         // Jump
-        if (isGrounded && Input.GetKeyDown(KeyCode.Space))
+        if (isGrounded && Keyboard.current.spaceKey.isPressed)
         {
             velocity.y = jump_speed;
         }
 
         // Camera look up/down
-        var turn_cam = new Vector3(-Input.GetAxisRaw("Mouse Y"), 0, 0);
-        turn_cam = turn_cam * mouse_sensitivity * Time.deltaTime;
-        player_cam.transform.localEulerAngles += turn_cam;
+        cam_yaw += -Mouse.current.delta.y.value * mouse_sensitivity * Time.deltaTime;
+        cam_yaw = Mathf.Clamp(cam_yaw, -70.0f, 70.0f);
+        player_cam.transform.localEulerAngles = new Vector3(cam_yaw, 0, 0);
     }
 }
