@@ -112,6 +112,8 @@ public class Stats : IGameSystem
         float time = (float)Time.frameCount / 60.0f;
         for (var i = 0; i < 10; i++)
             DebugOverlay.DrawLine(60, 20, 60 + Mathf.Sin(Mathf.PI*0.2f*i + time) * 8.0f, 20 + Mathf.Cos(Mathf.PI*0.2f*i + time) * 8.0f * ratio, Color.black);
+
+        DebugOverlay.DrawQuad(5, 22, 4, 2, Color.magenta);
     }
 
     public void Shutdown() { }

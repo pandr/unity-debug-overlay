@@ -207,6 +207,13 @@ public class DebugOverlay
         instance.AddLine(x1, y1, x2, y2, col);
     }
 
+    public static void DrawQuad(float x, float y, float w, float h, Color color)
+    {
+        if (instance == null)
+            return;
+        instance.AddQuad(x, y, w, h, '\0', color);
+    }
+
     void _DrawText(float x, float y, ref char[] text, int length)
     {
         const string hexes = "0123456789ABCDEF";
