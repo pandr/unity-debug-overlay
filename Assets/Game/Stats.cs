@@ -114,6 +114,9 @@ public class Stats : IGameSystem
             DebugOverlay.DrawLine(60, 20, 60 + Mathf.Sin(Mathf.PI*0.2f*i + time) * 8.0f, 20 + Mathf.Cos(Mathf.PI*0.2f*i + time) * 8.0f * ratio, Color.black);
 
         DebugOverlay.DrawQuad(5, 22, 4, 2, Color.magenta);
+
+        // Demo: Draw a textured quad using the new API
+        DebugOverlay.DrawTexturedQuad(12, 22, 4, 2, Texture2D.whiteTexture, Color.white);
     }
 
     public void Shutdown() { }

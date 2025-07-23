@@ -25,12 +25,14 @@ Shader "Instanced/GlyphShaderProc" {
 
 			sampler2D _MainTex;
 			float4 scales; // glyph scale in world (x,y) and on texture (z,w)
+			int _InstanceBufferOffset;
 
 			struct instanceData
 			{
 				float4 position;
 				float4 size;
 				float4 color;
+				int textureId;
 			};
 
 			StructuredBuffer<instanceData> positionBuffer;
@@ -53,9 +55,10 @@ Shader "Instanced/GlyphShaderProc" {
 				float4 v_pos = saturate(float4(2 - abs(vertID - 2), 2 - abs(vertID - 3), 0, 0));
 
 				// Read instance data
-				float4 pos_uv = positionBuffer[instID].position;
-				float2 scale = positionBuffer[instID].size.xy;
-				float4 color = positionBuffer[instID].color;
+				int bufferIndex = instID + _InstanceBufferOffset;
+				float4 pos_uv = positionBuffer[bufferIndex].position;
+				float2 scale = positionBuffer[bufferIndex].size.xy;
+				float4 color = positionBuffer[bufferIndex].color;
 
 				// Generate uv
 				float2 uv = (pos_uv.zw + v_pos.xy) * scales.zw;
