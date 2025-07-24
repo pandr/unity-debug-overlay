@@ -385,7 +385,6 @@ public class DebugOverlay
             // Set texture and buffer offset
             Texture tex = m_ActiveTextures[texId];
             m_RuntimeGlyphMaterial.SetTexture("_MainTex", tex);
-            Debug.Log("Drawing instances " + start + " to " + end);
             m_RuntimeGlyphMaterial.SetInt("_InstanceBufferOffset", start);
             m_RuntimeGlyphMaterial.SetPass(0);
             Graphics.DrawProceduralNow(MeshTopology.Triangles, (end - start) * 6, 1);

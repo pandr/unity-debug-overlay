@@ -14,6 +14,9 @@ public class Stats : IGameSystem
 
     int m_ShowStats = 1;
 
+    // Test CVar for demonstration
+    public static CVarFloat testCvar = new CVarFloat("testCvar", 42.0f, "A test config variable");
+
     public void Init()
     {
         m_StopWatch = new System.Diagnostics.Stopwatch();
@@ -58,6 +61,9 @@ public class Stats : IGameSystem
     {
         if (m_ShowStats < 1)
             return;
+
+        // Show the value of the test cvar
+        DebugOverlay.Write(1, 23, "testCvar = {0}", testCvar.value);
 
         long ticks = m_StopWatch.ElapsedTicks;
         float frameDurationMs = (ticks - m_LastFrameTicks) * 1000 / (float)m_StopWatchFreq;
