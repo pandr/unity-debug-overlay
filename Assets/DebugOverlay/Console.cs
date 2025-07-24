@@ -37,6 +37,10 @@ public class Console : IGameSystem
 
     System.UInt32[] m_ConsoleBuffer;
 
+    // Watched cvars
+    static List<CVarBase> watchedCvars = new List<CVarBase>();
+    public static IEnumerable<CVarBase> WatchedCVars => watchedCvars;
+
     public Console()
     {
         m_ConsoleBuffer = new System.UInt32[k_BufferSize];
@@ -95,6 +99,7 @@ public class Console : IGameSystem
     {
         Init(null);
         AddCommand("cvars", CmdCvars, "List all config variables");
+        AddCommand("watch", CmdWatch, "Watch/unwatch a cvar on the overlay");
     }
 
     public void Init(DebugOverlay debugOverlay)
@@ -504,6 +509,32 @@ public class Console : IGameSystem
         foreach (var cvar in CVarRegistry.All)
         {
             Write("{0} = {1}\n", cvar.name, cvar.GetValueString());
+        }
+    }
+
+    void CmdWatch(string[] args)
+    {
+        if (args.Length < 1)
+        {
+            Write("Usage: watch <cvarname>\n");
+            return;
+        }
+        var name = args[0];
+        var cvar = CVarRegistry.Find(name);
+        if (cvar == null)
+        {
+            Write("Unknown cvar: {0}\n", name);
+            return;
+        }
+        if (watchedCvars.Contains(cvar))
+        {
+            watchedCvars.Remove(cvar);
+            Write("Stopped watching {0}\n", name);
+        }
+        else
+        {
+            watchedCvars.Add(cvar);
+            Write("Watching {0}\n", name);
         }
     }
 

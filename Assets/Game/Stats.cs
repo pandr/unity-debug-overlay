@@ -59,6 +59,13 @@ public class Stats : IGameSystem
     float[] fpsHistory = new float[50];
     public void TickUpdate()
     {
+        // Draw all watched cvars (always visible)
+        int watchY = 5;
+        foreach (var cvar in Console.WatchedCVars)
+        {
+            DebugOverlay.Write(1, watchY++, "{0} = {1}", cvar.name, cvar.GetValueString());
+        }
+
         if (m_ShowStats < 1)
             return;
 
