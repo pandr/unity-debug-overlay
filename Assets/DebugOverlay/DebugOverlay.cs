@@ -24,6 +24,12 @@ public class DebugOverlay
 
         width = w;
         height = h;
+
+
+        if (m_RuntimeGlyphMaterial == null && resources != null && resources.glyphMaterial != null)
+            m_RuntimeGlyphMaterial = new Material(resources.glyphMaterial);
+
+        _Clear();
     }
 
     public void Shutdown()
@@ -44,46 +50,6 @@ public class DebugOverlay
 
     public void TickLateUpdate()
     {
-        // Recreate compute buffer if needed.
-        if (m_QuadInstanceBuffer == null || m_QuadInstanceBuffer.count != m_QuadInstanceData.Length)
-        {
-            if (m_QuadInstanceBuffer != null)
-            {
-                m_QuadInstanceBuffer.Release();
-                m_QuadInstanceBuffer = null;
-            }
-
-            m_QuadInstanceBuffer = new ComputeBuffer(m_QuadInstanceData.Length, 16 + 16 + 16);
-            resources.glyphMaterial.SetBuffer("positionBuffer", m_QuadInstanceBuffer);
-        }
-
-        if (m_LineInstanceBuffer == null || m_LineInstanceBuffer.count != m_LineInstanceData.Length)
-        {
-            if (m_LineInstanceBuffer != null)
-            {
-                m_LineInstanceBuffer.Release();
-                m_LineInstanceBuffer = null;
-            }
-
-            m_LineInstanceBuffer = new ComputeBuffer(m_LineInstanceData.Length, 16 + 16);
-            resources.lineMaterial.SetBuffer("positionBuffer", m_LineInstanceBuffer);
-        }
-
-        m_QuadInstanceBuffer.SetData(m_QuadInstanceData, 0, 0, m_NumQuadsUsed);
-        m_NumQuadsToDraw = m_NumQuadsUsed;
-
-        m_LineInstanceBuffer.SetData(m_LineInstanceData, 0, 0, m_NumLinesUsed);
-        m_NumLinesToDraw = m_NumLinesUsed;
-
-        resources.glyphMaterial.SetVector("scales", new Vector4(
-            1.0f / width,
-            1.0f / height,
-            (float)resources.cellWidth / resources.glyphMaterial.mainTexture.width,
-            (float)resources.cellHeight / resources.glyphMaterial.mainTexture.height));
-
-        resources.lineMaterial.SetVector("scales", new Vector4(1.0f / width, 1.0f / height, 1.0f / 1280.0f, 1.0f / 720.0f));
-
-        _Clear();
     }
 
     public static void SetColor(Color col)
@@ -205,6 +171,13 @@ public class DebugOverlay
         if (instance == null)
             return;
         instance.AddLine(x1, y1, x2, y2, col);
+    }
+
+    public static void DrawQuad(float x, float y, float w, float h, Color color)
+    {
+        if (instance == null)
+            return;
+        instance.AddQuad(x, y, w, h, '\0', color);
     }
 
     void _DrawText(float x, float y, ref char[] text, int length)
@@ -350,6 +323,10 @@ public class DebugOverlay
 
     void _Clear()
     {
+        m_ActiveTextures.Clear();
+        // Ensure glyph texture is always present and has id 0
+        if (resources != null && resources.glyphMaterial != null && resources.glyphMaterial.mainTexture != null)
+            GetTextureId(resources.glyphMaterial.mainTexture);
         m_NumQuadsUsed = 0;
         m_NumLinesUsed = 0;
         SetOrigin(0, 0);
@@ -359,10 +336,65 @@ public class DebugOverlay
 
     public void Render()
     {
+        // Recreate compute buffer if needed.
+        if (m_QuadInstanceBuffer == null || m_QuadInstanceBuffer.count != m_QuadInstanceData.Length)
+        {
+            if (m_QuadInstanceBuffer != null)
+            {
+                m_QuadInstanceBuffer.Release();
+                m_QuadInstanceBuffer = null;
+            }
+            m_QuadInstanceBuffer = new ComputeBuffer(m_QuadInstanceData.Length, 16 + 16 + 16 + 4); // 52 bytes
+            m_RuntimeGlyphMaterial.SetBuffer("positionBuffer", m_QuadInstanceBuffer);
+        }
+
+        if (m_LineInstanceBuffer == null || m_LineInstanceBuffer.count != m_LineInstanceData.Length)
+        {
+            if (m_LineInstanceBuffer != null)
+            {
+                m_LineInstanceBuffer.Release();
+                m_LineInstanceBuffer = null;
+            }
+            m_LineInstanceBuffer = new ComputeBuffer(m_LineInstanceData.Length, 16 + 16);
+            resources.lineMaterial.SetBuffer("positionBuffer", m_LineInstanceBuffer);
+        }
+
+        m_QuadInstanceBuffer.SetData(m_QuadInstanceData, 0, 0, m_NumQuadsUsed);
+        m_NumQuadsToDraw = m_NumQuadsUsed;
+
+        m_LineInstanceBuffer.SetData(m_LineInstanceData, 0, 0, m_NumLinesUsed);
+        m_NumLinesToDraw = m_NumLinesUsed;
+
+        m_RuntimeGlyphMaterial.SetVector("scales", new Vector4(
+            1.0f / width,
+            1.0f / height,
+            (float)resources.cellWidth / resources.glyphMaterial.mainTexture.width,
+            (float)resources.cellHeight / resources.glyphMaterial.mainTexture.height));
+
+        resources.lineMaterial.SetVector("scales", new Vector4(1.0f / width, 1.0f / height, 1.0f / 1280.0f, 1.0f / 720.0f));
+
+        // Sort quads by textureId
+        System.Array.Sort(m_QuadInstanceData, 0, m_NumQuadsToDraw, QuadTextureIdComparer.Instance);
+        int start = 0;
+        while (start < m_NumQuadsToDraw)
+        {
+            int texId = m_QuadInstanceData[start].textureId;
+            int end = start + 1;
+            while (end < m_NumQuadsToDraw && m_QuadInstanceData[end].textureId == texId)
+                end++;
+            // Set texture and buffer offset
+            Texture tex = m_ActiveTextures[texId];
+            m_RuntimeGlyphMaterial.SetTexture("_MainTex", tex);
+            m_RuntimeGlyphMaterial.SetInt("_InstanceBufferOffset", start);
+            m_RuntimeGlyphMaterial.SetPass(0);
+            Graphics.DrawProceduralNow(MeshTopology.Triangles, (end - start) * 6, 1);
+            start = end;
+        }
+        // Draw lines as before
         resources.lineMaterial.SetPass(0);
         Graphics.DrawProceduralNow(MeshTopology.Triangles, m_NumLinesToDraw * 6, 1);
-        resources.glyphMaterial.SetPass(0);
-        Graphics.DrawProceduralNow(MeshTopology.Triangles, m_NumQuadsToDraw * 6, 1);
+
+        _Clear();
     }
 
     unsafe void AddLine(float x1, float y1, float x2, float y2, Vector4 col)
@@ -394,7 +426,7 @@ public class DebugOverlay
             System.Array.Copy(m_QuadInstanceData, newBuf, m_QuadInstanceData.Length);
             m_QuadInstanceData = newBuf;
         }
-
+        int texId = 0; // Always use glyph texture (index 0)
         fixed (QuadInstanceData* d = &m_QuadInstanceData[m_NumQuadsUsed])
         {
             if (c != '\0')
@@ -408,7 +440,6 @@ public class DebugOverlay
                 d->positionAndUV.z = 0;
                 d->positionAndUV.w = 0;
             }
-
             d->color = col;
             d->positionAndUV.x = x;
             d->positionAndUV.y = y;
@@ -416,11 +447,45 @@ public class DebugOverlay
             d->size.y = h;
             d->size.z = 0;
             d->size.w = 0;
+            d->textureId = texId;
         }
-
         m_NumQuadsUsed++;
     }
 
+    public static void DrawTexturedQuad(float x, float y, float w, float h, Texture texture, Color color)
+    {
+        if (instance == null)
+            return;
+        instance.AddTexturedQuad(x, y, w, h, texture, color);
+    }
+
+    public void AddTexturedQuad(float x, float y, float w, float h, Texture tex, Color col)
+    {
+        if (m_NumQuadsUsed >= m_QuadInstanceData.Length)
+        {
+            var newBuf = new QuadInstanceData[m_QuadInstanceData.Length + 128];
+            System.Array.Copy(m_QuadInstanceData, newBuf, m_QuadInstanceData.Length);
+            m_QuadInstanceData = newBuf;
+        }
+        int texId = GetTextureId(tex);
+        unsafe
+        {
+            fixed (QuadInstanceData* d = &m_QuadInstanceData[m_NumQuadsUsed])
+            {
+                d->positionAndUV.z = 0;
+                d->positionAndUV.w = 0;
+                d->color = col;
+                d->positionAndUV.x = x;
+                d->positionAndUV.y = y;
+                d->size.x = w;
+                d->size.y = h;
+                d->size.z = 0;
+                d->size.w = 0;
+                d->textureId = texId;
+            }
+        }
+        m_NumQuadsUsed++;
+    }
 
     float m_OriginX;
     float m_OriginY;
@@ -431,6 +496,7 @@ public class DebugOverlay
         public Vector4 positionAndUV; // if UV are zero, dont sample
         public Vector4 size; // zw unused
         public Vector4 color;
+        public int textureId; // index into active textures for this frame
     }
 
     struct LineInstanceData
@@ -448,4 +514,28 @@ public class DebugOverlay
     int m_NumLinesToDraw = 0;
     QuadInstanceData[] m_QuadInstanceData = new QuadInstanceData[128];
     LineInstanceData[] m_LineInstanceData = new LineInstanceData[128];
+
+    // Texture batching state
+    System.Collections.Generic.List<Texture> m_ActiveTextures = new System.Collections.Generic.List<Texture>();
+
+    int GetTextureId(Texture tex)
+    {
+        if (tex == null) return 0; // 0 = default glyph texture
+        int idx = m_ActiveTextures.IndexOf(tex);
+        if (idx >= 0)
+            return idx;
+        m_ActiveTextures.Add(tex);
+        return m_ActiveTextures.Count - 1;
+    }
+
+    class QuadTextureIdComparer : System.Collections.Generic.IComparer<QuadInstanceData>
+    {
+        public static readonly QuadTextureIdComparer Instance = new QuadTextureIdComparer();
+        public int Compare(QuadInstanceData a, QuadInstanceData b)
+        {
+            return a.textureId.CompareTo(b.textureId);
+        }
+    }
+
+    Material m_RuntimeGlyphMaterial;
 }

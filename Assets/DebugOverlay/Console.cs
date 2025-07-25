@@ -37,6 +37,10 @@ public class Console : IGameSystem
 
     System.UInt32[] m_ConsoleBuffer;
 
+    // Watched cvars
+    static List<CVarBase> watchedCvars = new List<CVarBase>();
+    public static IEnumerable<CVarBase> WatchedCVars => watchedCvars;
+
     public Console()
     {
         m_ConsoleBuffer = new System.UInt32[k_BufferSize];
@@ -94,6 +98,8 @@ public class Console : IGameSystem
     public void Init()
     {
         Init(null);
+        AddCommand("cvars", CmdCvars, "List all config variables");
+        AddCommand("watch", CmdWatch, "Watch/unwatch a cvar on the overlay");
     }
 
     public void Init(DebugOverlay debugOverlay)
@@ -236,7 +242,7 @@ public class Console : IGameSystem
         m_HistoryDisplayIndex = m_HistoryNextIndex;
     }
 
-    void ExecuteCommand(string command)
+    public void ExecuteCommand(string command)
     {
         var splitCommand = command.Split(null as char[], System.StringSplitOptions.RemoveEmptyEntries);
         if (splitCommand.Length < 1)
@@ -244,6 +250,27 @@ public class Console : IGameSystem
 
         Write('>' + string.Join(" ", splitCommand) + '\n');
         var commandName = splitCommand[0].ToLower();
+
+        // Handle 'name value' or 'name' for cvars
+        if (splitCommand.Length == 2)
+        {
+            var cvar = CVarRegistry.Find(commandName);
+            if (cvar != null)
+            {
+                cvar.SetValueString(splitCommand[1]);
+                Write("{0} set to {1}\n", cvar.name, cvar.GetValueString());
+                return;
+            }
+        }
+        else if (splitCommand.Length == 1)
+        {
+            var cvar = CVarRegistry.Find(commandName);
+            if (cvar != null)
+            {
+                Write("{0} = {1}\n", cvar.name, cvar.GetValueString());
+                return;
+            }
+        }
 
         CommandDelegate commandDelegate;
 
@@ -433,6 +460,14 @@ public class Console : IGameSystem
                 continue;
             matches.Add(name);
         }
+        // Add cvar names to tab completion
+        foreach (var cvar in CVarRegistry.All)
+        {
+            var name = cvar.name;
+            if (!name.StartsWith(prefix, true, null))
+                continue;
+            matches.Add(name);
+        }
 
         if (matches.Count == 0)
             return;
@@ -467,6 +502,40 @@ public class Console : IGameSystem
                 return i - 1;
         }
         return minl;
+    }
+
+    void CmdCvars(string[] args)
+    {
+        foreach (var cvar in CVarRegistry.All)
+        {
+            Write("{0} = {1}\n", cvar.name, cvar.GetValueString());
+        }
+    }
+
+    void CmdWatch(string[] args)
+    {
+        if (args.Length < 1)
+        {
+            Write("Usage: watch <cvarname>\n");
+            return;
+        }
+        var name = args[0];
+        var cvar = CVarRegistry.Find(name);
+        if (cvar == null)
+        {
+            Write("Unknown cvar: {0}\n", name);
+            return;
+        }
+        if (watchedCvars.Contains(cvar))
+        {
+            watchedCvars.Remove(cvar);
+            Write("Stopped watching {0}\n", name);
+        }
+        else
+        {
+            watchedCvars.Add(cvar);
+            Write("Watching {0}\n", name);
+        }
     }
 
     DebugOverlay m_DebugOverlay;

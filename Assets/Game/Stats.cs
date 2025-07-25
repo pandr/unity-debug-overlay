@@ -14,6 +14,9 @@ public class Stats : IGameSystem
 
     int m_ShowStats = 1;
 
+    // Test CVar for demonstration
+    public static CVarFloat testCvar = new CVarFloat("testCvar", 42.0f, "A test config variable");
+
     public void Init()
     {
         m_StopWatch = new System.Diagnostics.Stopwatch();
@@ -56,8 +59,18 @@ public class Stats : IGameSystem
     float[] fpsHistory = new float[50];
     public void TickUpdate()
     {
+        // Draw all watched cvars (always visible)
+        int watchY = 5;
+        foreach (var cvar in Console.WatchedCVars)
+        {
+            DebugOverlay.Write(1, watchY++, "{0} = {1}", cvar.name, cvar.GetValueString());
+        }
+
         if (m_ShowStats < 1)
             return;
+
+        // Show the value of the test cvar
+        DebugOverlay.Write(1, 23, "testCvar = {0}", testCvar.value);
 
         long ticks = m_StopWatch.ElapsedTicks;
         float frameDurationMs = (ticks - m_LastFrameTicks) * 1000 / (float)m_StopWatchFreq;
@@ -112,6 +125,11 @@ public class Stats : IGameSystem
         float time = (float)Time.frameCount / 60.0f;
         for (var i = 0; i < 10; i++)
             DebugOverlay.DrawLine(60, 20, 60 + Mathf.Sin(Mathf.PI*0.2f*i + time) * 8.0f, 20 + Mathf.Cos(Mathf.PI*0.2f*i + time) * 8.0f * ratio, Color.black);
+
+        DebugOverlay.DrawQuad(5, 22, 4, 2, Color.magenta);
+
+        // Demo: Draw a textured quad using the new API
+        DebugOverlay.DrawTexturedQuad(12, 22, 4, 2, Texture2D.whiteTexture, Color.white);
     }
 
     public void Shutdown() { }
