@@ -43,7 +43,11 @@ public unsafe class Converter : IConverter<int>, IConverter<float>, IConverter<s
         }
         int v1 = Mathf.FloorToInt(value);
         float fractMult = (int)Mathf.Pow(10.0f, formatSpec.fractWidth);
-        int v2 = Mathf.RoundToInt(value * fractMult) % (int)(fractMult);
+        int v2 = Mathf.RoundToInt((value-(float)v1) * fractMult);
+        if(v2>=fractMult) {
+            v1++;
+            v2 = 0;
+        }
         ConvertInt(ref dst, end, neg ? -v1 : v1, intWidth, formatSpec.integerWidth, formatSpec.leadingZero);
         if (dst < end)
             *dst++ = '.';

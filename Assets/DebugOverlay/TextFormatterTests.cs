@@ -44,6 +44,14 @@ public class TextFormatterTests
     }
 
     [Test]
+    public void Formats_Float_CustomPrecision_2()
+    {
+        char[] buf = new char[32];
+        int len = StringFormatter.Write(ref buf, 0, "Value: {0:0.000}", 9.9995f);
+        Assert.AreEqual("Value: 10.000", new string(buf, 0, len));
+    }
+
+    [Test]
     public void Formats_String_LeftAlign()
     {
         char[] buf = new char[32];
