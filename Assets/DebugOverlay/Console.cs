@@ -255,7 +255,62 @@ public class Console : IGameSystem
         }
         else
         {
-            Write("Unknown command: {0}\n", splitCommand[0]);
+            // CVar get/set support
+            // Support: name (get), name = value (set)
+            string cvarName = commandName;
+            string valueStr = null;
+            if (splitCommand.Length >= 3 && splitCommand[1] == "=")
+            {
+                valueStr = string.Join(" ", splitCommand, 2, splitCommand.Length - 2);
+            }
+            else if (command.Contains("="))
+            {
+                // Support 'name=val' (no spaces)
+                var eqIdx = command.IndexOf('=');
+                cvarName = command.Substring(0, eqIdx).Trim();
+                valueStr = command.Substring(eqIdx + 1).Trim();
+            }
+
+            var cvarObj = CVarRegistry.Find(cvarName);
+            if (cvarObj != null)
+            {
+                var cvarType = cvarObj.GetType();
+                var valueProp = cvarType.GetProperty("Value");
+                if (valueStr == null)
+                {
+                    // Get value
+                    var val = valueProp.GetValue(cvarObj);
+                    Write($"{cvarName} = {val}\n");
+                }
+                else
+                {
+                    try
+                    {
+                        var targetType = valueProp.PropertyType;
+                        object parsedVal = null;
+                        if (targetType == typeof(int))
+                            parsedVal = int.Parse(valueStr);
+                        else if (targetType == typeof(float))
+                            parsedVal = float.Parse(valueStr, System.Globalization.CultureInfo.InvariantCulture);
+                        else if (targetType == typeof(bool))
+                            parsedVal = bool.Parse(valueStr);
+                        else if (targetType == typeof(string))
+                            parsedVal = valueStr;
+                        else
+                            throw new Exception($"Unsupported CVar type: {targetType}");
+                        valueProp.SetValue(cvarObj, parsedVal);
+                        Write($"{cvarName} set to {parsedVal}\n");
+                    }
+                    catch (Exception ex)
+                    {
+                        Write($"Failed to set {cvarName}: {ex.Message}\n");
+                    }
+                }
+            }
+            else
+            {
+                Write("Unknown command or cvar: {0}\n", splitCommand[0]);
+            }
         }
     }
 

@@ -29,6 +29,9 @@ public class Game
     Console m_Console;
     Stats m_Stats;
 
+    // Example config variable (CVar)
+    public static CVar<float> fov = new CVar<float>("fov", 60.0f, "Field of view");
+
     public void Init()
     {
         Debug.Assert(_instance == null);
@@ -45,7 +48,7 @@ public class Game
         m_Stats = new Stats();
         m_Stats.Init();
 
-        Game.console.Write("^FFFGame initialized^F44.^4F4.^44F.\n");
+        Game.console.Write($"^FFFGame initialized. FOV is {fov.Value}^F44.^4F4.^44F.\n");
     }
 
     public void Shutdown()
