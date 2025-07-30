@@ -101,6 +101,9 @@ public class Console : IGameSystem
         m_DebugOverlay = debugOverlay != null ? debugOverlay : DebugOverlay.instance;
         Resize(m_DebugOverlay.width, m_DebugOverlay.height);
         Clear();
+        
+        // Initialize CVar system
+        CVarSystem.Initialize(this);
     }
 
     public void Shutdown()
@@ -238,11 +241,20 @@ public class Console : IGameSystem
 
     void ExecuteCommand(string command)
     {
+        if (string.IsNullOrWhiteSpace(command))
+            return;
+
+        Write('>' + command + '\n');
+
+        // Try CVar handling first (supports "name = value" and "name" syntax)
+        if (CVarSystem.TryHandleConsoleInput(command, this))
+            return;
+
+        // Parse as regular command
         var splitCommand = command.Split(null as char[], System.StringSplitOptions.RemoveEmptyEntries);
         if (splitCommand.Length < 1)
             return;
 
-        Write('>' + string.Join(" ", splitCommand) + '\n');
         var commandName = splitCommand[0].ToLower();
 
         CommandDelegate commandDelegate;

@@ -12,8 +12,6 @@ public class Stats : IGameSystem
     long m_StopWatchFreq;
     long m_LastFrameTicks;
 
-    int m_ShowStats = 1;
-
     public void Init()
     {
         m_StopWatch = new System.Diagnostics.Stopwatch();
@@ -21,12 +19,15 @@ public class Stats : IGameSystem
         m_StopWatch.Start();
         m_LastFrameTicks = m_StopWatch.ElapsedTicks;
         Debug.Assert(System.Diagnostics.Stopwatch.IsHighResolution);
-        Game.console.AddCommand("showstats", CmdShowstats, "Show or hide stats");
+        
+        // Legacy command still works, but now uses CVar
+        Game.console.AddCommand("showstats", CmdShowstats, "Toggle detailed stats (also available as cvar)");
     }
 
     private void CmdShowstats(string[] args)
     {
-        m_ShowStats = (m_ShowStats + 1) % 3;
+        // Toggle through: false -> true -> false
+        CVars.showStats.Value = !CVars.showStats.Value;
     }
 
     void CalcStatistics(float[] data, out float mean, out float variance, out float minValue, out float maxValue)
@@ -56,7 +57,7 @@ public class Stats : IGameSystem
     float[] fpsHistory = new float[50];
     public void TickUpdate()
     {
-        if (m_ShowStats < 1)
+        if (!CVars.showFps)
             return;
 
         long ticks = m_StopWatch.ElapsedTicks;
@@ -70,9 +71,9 @@ public class Stats : IGameSystem
         fpsHistory[Time.frameCount % fpsHistory.Length] = 1.0f / Time.deltaTime;
         DebugOverlay.DrawGraph(1, 1, 9, 1.5f, fpsHistory, Time.frameCount % fpsHistory.Length, Color.green);
 
-        DebugOverlay.Write(30, 0, "Open console (F12) and type: \"showstats\" to toggle graphs");
+        DebugOverlay.Write(30, 0, "Open console (F12) and type: \"showstats = true\" or \"showfps = false\"");
       
-        if (m_ShowStats < 2)
+        if (!CVars.showStats)
             return;
 
         DebugOverlay.Write(0, 4, "Hello, {0,-5} world!", Time.frameCount % 100 < 50 ? "Happy" : "Evil");
