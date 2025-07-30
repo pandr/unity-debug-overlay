@@ -43,6 +43,7 @@ public class Console : IGameSystem
         m_InputFieldBuffer = new char[k_InputBufferSize];
         AddCommand("help", CmdHelp, "Show available commands");
         AddCommand("dump", CmdDumpScene, "Dump scene hierarchy in active scene");
+        AddCommand("cvars", CmdListCVars, "List all config variables (CVars)");
         Keyboard.current.onTextInput += OnTextInput;
     }
 
@@ -256,19 +257,12 @@ public class Console : IGameSystem
         else
         {
             // CVar get/set support
-            // Support: name (get), name = value (set)
+            // Support: name (get), name value (set)
             string cvarName = commandName;
             string valueStr = null;
-            if (splitCommand.Length >= 3 && splitCommand[1] == "=")
+            if (splitCommand.Length >= 2)
             {
-                valueStr = string.Join(" ", splitCommand, 2, splitCommand.Length - 2);
-            }
-            else if (command.Contains("="))
-            {
-                // Support 'name=val' (no spaces)
-                var eqIdx = command.IndexOf('=');
-                cvarName = command.Substring(0, eqIdx).Trim();
-                valueStr = command.Substring(eqIdx + 1).Trim();
+                valueStr = string.Join(" ", splitCommand, 1, splitCommand.Length - 1);
             }
 
             var cvarObj = CVarRegistry.Find(cvarName);
@@ -286,20 +280,9 @@ public class Console : IGameSystem
                 {
                     try
                     {
-                        var targetType = valueProp.PropertyType;
-                        object parsedVal = null;
-                        if (targetType == typeof(int))
-                            parsedVal = int.Parse(valueStr);
-                        else if (targetType == typeof(float))
-                            parsedVal = float.Parse(valueStr, System.Globalization.CultureInfo.InvariantCulture);
-                        else if (targetType == typeof(bool))
-                            parsedVal = bool.Parse(valueStr);
-                        else if (targetType == typeof(string))
-                            parsedVal = valueStr;
-                        else
-                            throw new Exception($"Unsupported CVar type: {targetType}");
-                        valueProp.SetValue(cvarObj, parsedVal);
-                        Write($"{cvarName} set to {parsedVal}\n");
+                        var setFromStringMethod = cvarType.GetMethod("SetFromString");
+                        setFromStringMethod.Invoke(cvarObj, new object[] { valueStr });
+                        Write($"{cvarName} set to {valueProp.GetValue(cvarObj)}\n");
                     }
                     catch (Exception ex)
                     {
@@ -488,6 +471,16 @@ public class Console : IGameSystem
                 continue;
             matches.Add(name);
         }
+        // Add CVar names to tab completion
+        foreach (var obj in CVarRegistry.AllCVars())
+        {
+            var type = obj.GetType();
+            var name = (string)type.GetProperty("Name").GetValue(obj);
+            if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                continue;
+            if(!matches.Contains(name))
+                matches.Add(name);
+        }
 
         if (matches.Count == 0)
             return;
@@ -522,6 +515,18 @@ public class Console : IGameSystem
                 return i - 1;
         }
         return minl;
+    }
+
+    void CmdListCVars(string[] args)
+    {
+        foreach (var obj in CVarRegistry.AllCVars())
+        {
+            var type = obj.GetType();
+            var name = (string)type.GetProperty("Name").GetValue(obj);
+            var value = type.GetProperty("Value").GetValue(obj);
+            var desc = (string)type.GetProperty("Description").GetValue(obj);
+            Write($"  {name} = {value}  // {desc}\n");
+        }
     }
 
     DebugOverlay m_DebugOverlay;

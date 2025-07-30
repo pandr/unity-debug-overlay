@@ -36,4 +36,21 @@ public class CVar<T>
     {
         Value = DefaultValue;
     }
+
+    public void SetFromString(string str)
+    {
+        object parsedVal;
+        var t = typeof(T);
+        if (t == typeof(int))
+            parsedVal = int.Parse(str);
+        else if (t == typeof(float))
+            parsedVal = float.Parse(str, System.Globalization.CultureInfo.InvariantCulture);
+        else if (t == typeof(bool))
+            parsedVal = bool.Parse(str);
+        else if (t == typeof(string))
+            parsedVal = str;
+        else
+            throw new Exception($"Unsupported CVar type: {t}");
+        Value = (T)parsedVal;
+    }
 }
