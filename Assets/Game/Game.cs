@@ -40,6 +40,13 @@ public class Game
         m_Console = new Console();
         m_Console.Init();
 
+        // Force static initialization of known CVars
+        _ = GameCVars.Fov;
+        _ = GameCVars.GodMode;
+
+        // Register variable commands (CVars)
+        CVarRegistry.RegisterConsoleCommands(m_Console);
+
         m_Console.AddCommand("quit", CmdQuit, "Quit game");
 
         m_Stats = new Stats();

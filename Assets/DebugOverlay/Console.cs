@@ -255,6 +255,30 @@ public class Console : IGameSystem
         }
         else
         {
+            // Support syntax like "name=value" or "name= value" for CVars
+            int eqIdx = commandName.IndexOf('=');
+            if (eqIdx > 0)
+            {
+                var potentialName = commandName.Substring(0, eqIdx);
+                if (m_Commands.TryGetValue(potentialName, out commandDelegate))
+                {
+                    var rhs = commandName.Substring(eqIdx + 1);
+                    // Build new argument list: if RHS not empty use it, otherwise use remaining split args
+                    if (!string.IsNullOrEmpty(rhs))
+                        commandDelegate(new string[] { rhs });
+                    else if (splitCommand.Length > 1)
+                    {
+                        var args = new string[splitCommand.Length - 1];
+                        Array.Copy(splitCommand, 1, args, 0, args.Length);
+                        commandDelegate(args);
+                    }
+                    else
+                    {
+                        commandDelegate(Array.Empty<string>());
+                    }
+                    return;
+                }
+            }
             Write("Unknown command: {0}\n", splitCommand[0]);
         }
     }
