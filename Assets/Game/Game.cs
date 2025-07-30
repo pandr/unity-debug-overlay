@@ -42,10 +42,19 @@ public class Game
 
         m_Console.AddCommand("quit", CmdQuit, "Quit game");
 
+        // Register config variables
+        RegisterConfigVars();
+
         m_Stats = new Stats();
         m_Stats.Init();
 
         Game.console.Write("^FFFGame initialized^F44.^4F4.^44F.\n");
+    }
+
+    void RegisterConfigVars()
+    {
+        // Config variables are now registered in their respective classes
+        // This method is kept for any global config vars that might be added in the future
     }
 
     public void Shutdown()

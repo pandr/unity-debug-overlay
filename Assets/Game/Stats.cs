@@ -12,7 +12,9 @@ public class Stats : IGameSystem
     long m_StopWatchFreq;
     long m_LastFrameTicks;
 
-    int m_ShowStats = 1;
+    // Config variables for stats display
+    static ConfigVarBool s_ShowStats = new ConfigVarBool("showstats", true, "Show performance stats");
+    static ConfigVarInt s_ShowStatsLevel = new ConfigVarInt("showstatslevel", 1, "Stats detail level (0-2)");
 
     public void Init()
     {
@@ -21,12 +23,18 @@ public class Stats : IGameSystem
         m_StopWatch.Start();
         m_LastFrameTicks = m_StopWatch.ElapsedTicks;
         Debug.Assert(System.Diagnostics.Stopwatch.IsHighResolution);
-        Game.console.AddCommand("showstats", CmdShowstats, "Show or hide stats");
+        
+        // Register config variables
+        ConfigVarRegistry.Register(ref s_ShowStats);
+        ConfigVarRegistry.Register(ref s_ShowStatsLevel);
+        
+        Game.console.AddCommand("showstats", CmdShowstats, "Toggle stats display");
     }
 
     private void CmdShowstats(string[] args)
     {
-        m_ShowStats = (m_ShowStats + 1) % 3;
+        int currentLevel = s_ShowStatsLevel.Value;
+        s_ShowStatsLevel.TrySetValue(((currentLevel + 1) % 3).ToString());
     }
 
     void CalcStatistics(float[] data, out float mean, out float variance, out float minValue, out float maxValue)
@@ -56,7 +64,7 @@ public class Stats : IGameSystem
     float[] fpsHistory = new float[50];
     public void TickUpdate()
     {
-        if (m_ShowStats < 1)
+        if (!s_ShowStats.Value)
             return;
 
         long ticks = m_StopWatch.ElapsedTicks;
@@ -72,12 +80,18 @@ public class Stats : IGameSystem
 
         DebugOverlay.Write(30, 0, "Open console (F12) and type: \"showstats\" to toggle graphs");
       
-        if (m_ShowStats < 2)
+        if (s_ShowStatsLevel.Value < 2)
             return;
 
         DebugOverlay.Write(0, 4, "Hello, {0,-5} world!", Time.frameCount % 100 < 50 ? "Happy" : "Evil");
         DebugOverlay.Write(0, 5, "FrameNo: {0,7}", Time.frameCount);
         DebugOverlay.Write(0, 6, "MonoHeap:{0,7} kb", (int)(UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong() / 1024));
+        
+        // Display some config variables
+        float fovValue, mouseValue;
+        ConfigVarRegistry.TryGetFloat("fov", out fovValue);
+        ConfigVarRegistry.TryGetFloat("mousesensitivity", out mouseValue);
+        DebugOverlay.Write(0, 7, "FOV:{0,6:###.##} Mouse:{1,6:###.##}", fovValue, mouseValue);
 
         /// Graphing difference between deltaTime and actual passed time
         float fps = Time.deltaTime * 1000.0f;

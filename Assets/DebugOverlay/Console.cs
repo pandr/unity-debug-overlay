@@ -43,6 +43,10 @@ public class Console : IGameSystem
         m_InputFieldBuffer = new char[k_InputBufferSize];
         AddCommand("help", CmdHelp, "Show available commands");
         AddCommand("dump", CmdDumpScene, "Dump scene hierarchy in active scene");
+        AddCommand("cvarlist", CmdCvarList, "List all config variables");
+        AddCommand("cvar", CmdCvar, "Get or set config variable: cvar <name> [value]");
+        AddCommand("cvarreset", CmdCvarReset, "Reset config variable to default: cvarreset <name>");
+        AddCommand("cvartest", CmdCvarTest, "Test config variable system");
         Keyboard.current.onTextInput += OnTextInput;
     }
 
@@ -89,6 +93,85 @@ public class Console : IGameSystem
         {
             Write("  {0,-15} {1}\n", c.Key, m_CommandDescriptions[c.Key]);
         }
+    }
+
+    void CmdCvarList(string[] args)
+    {
+        Write("Config Variables ({0}):\n", ConfigVarRegistry.Count);
+        var enumerator = ConfigVarRegistry.GetAllVars();
+        while (enumerator.MoveNext())
+        {
+            var kvp = enumerator.Current;
+            Write("  {0,-20} = {1,-10} {2}\n", kvp.Key, kvp.Value.GetStringValue(), kvp.Value.Description);
+        }
+    }
+
+    void CmdCvar(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            Write("Usage: cvar <name> [value]\n");
+            return;
+        }
+
+        string varName = args[0];
+        
+        if (args.Length == 1)
+        {
+            // Get value
+            if (ConfigVarRegistry.TryGetValue(varName, out IConfigVar configVar))
+            {
+                Write("{0} = {1}\n", varName, configVar.GetStringValue());
+            }
+            else
+            {
+                Write("Config variable '{0}' not found\n", varName);
+            }
+        }
+        else if (args.Length == 2)
+        {
+            // Set value
+            string value = args[1];
+            if (ConfigVarRegistry.TrySetValue(varName, value))
+            {
+                Write("{0} = {1}\n", varName, value);
+            }
+            else
+            {
+                Write("Failed to set {0} = {1}\n", varName, value);
+            }
+        }
+        else
+        {
+            Write("Usage: cvar <name> [value]\n");
+        }
+    }
+
+    void CmdCvarReset(string[] args)
+    {
+        if (args.Length != 1)
+        {
+            Write("Usage: cvarreset <name>\n");
+            return;
+        }
+
+        string varName = args[0];
+        ConfigVarRegistry.ResetToDefault(varName);
+        Write("Reset {0} to default value\n", varName);
+    }
+
+    void CmdCvarTest(string[] args)
+    {
+        Write("Testing config variable system...\n");
+        
+        // Test setting and getting values
+        ConfigVarRegistry.TrySetValue("fov", "90.0");
+        ConfigVarRegistry.TrySetValue("mousesensitivity", "100.0");
+        ConfigVarRegistry.TrySetValue("showstats", "false");
+        
+        Write("Set fov=90, mousesensitivity=100, showstats=false\n");
+        Write("Use 'cvarlist' to see all variables\n");
+        Write("Use 'cvar fov' to see current value\n");
     }
 
     public void Init()
