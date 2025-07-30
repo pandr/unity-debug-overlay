@@ -41,6 +41,7 @@ public class Game
         m_Console.Init();
 
         m_Console.AddCommand("quit", CmdQuit, "Quit game");
+        m_Console.AddCommand("cvarlist", ConfigVar.CmdList, "List all config variables");
 
         m_Stats = new Stats();
         m_Stats.Init();

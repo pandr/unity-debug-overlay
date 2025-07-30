@@ -14,6 +14,12 @@ public class Stats : IGameSystem
 
     int m_ShowStats = 1;
 
+    // Config variable IDs for fast access
+    private static int s_FovId;
+    private static int s_MouseSensitivityId;
+    private static int s_ShowDebugInfoId;
+    private static int s_GraphScaleId;
+
     public void Init()
     {
         m_StopWatch = new System.Diagnostics.Stopwatch();
@@ -22,11 +28,29 @@ public class Stats : IGameSystem
         m_LastFrameTicks = m_StopWatch.ElapsedTicks;
         Debug.Assert(System.Diagnostics.Stopwatch.IsHighResolution);
         Game.console.AddCommand("showstats", CmdShowstats, "Show or hide stats");
+        Game.console.AddCommand("demo", CmdDemo, "Demo config variable usage");
+
+        // Register config variables
+        s_FovId = ConfigVar.RegisterFloat("fov", 70.0f, "Field of view");
+        s_MouseSensitivityId = ConfigVar.RegisterFloat("mousesens", 1.0f, "Mouse sensitivity");
+        s_ShowDebugInfoId = ConfigVar.RegisterBool("showdebug", true, "Show debug information");
+        s_GraphScaleId = ConfigVar.RegisterFloat("graphscale", 1.5f, "Graph scale factor");
     }
 
     private void CmdShowstats(string[] args)
     {
         m_ShowStats = (m_ShowStats + 1) % 3;
+    }
+
+    private void CmdDemo(string[] args)
+    {
+        Game.console.Write("Config Variable Demo:\n");
+        Game.console.Write("Try these commands:\n");
+        Game.console.Write("  fov = 90\n");
+        Game.console.Write("  mousesens = 2.5\n");
+        Game.console.Write("  showdebug = false\n");
+        Game.console.Write("  graphscale = 2.0\n");
+        Game.console.Write("  cvarlist\n");
     }
 
     void CalcStatistics(float[] data, out float mean, out float variance, out float minValue, out float maxValue)
@@ -63,14 +87,26 @@ public class Stats : IGameSystem
         float frameDurationMs = (ticks - m_LastFrameTicks) * 1000 / (float)m_StopWatchFreq;
         m_LastFrameTicks = ticks;
 
+        // Fast access to config variables - no allocations or lookups
+        float fov = ConfigVar.GetFloat(s_FovId);
+        float mouseSens = ConfigVar.GetFloat(s_MouseSensitivityId);
+        bool showDebug = ConfigVar.GetBool(s_ShowDebugInfoId);
+        float graphScale = ConfigVar.GetFloat(s_GraphScaleId);
+
         DebugOverlay.SetColor(Color.yellow);
         DebugOverlay.SetOrigin(0, 0);
 
         DebugOverlay.Write(1, 0, "FPS:{0,6:###.##}", 1.0f / Time.deltaTime);
         fpsHistory[Time.frameCount % fpsHistory.Length] = 1.0f / Time.deltaTime;
-        DebugOverlay.DrawGraph(1, 1, 9, 1.5f, fpsHistory, Time.frameCount % fpsHistory.Length, Color.green);
+        DebugOverlay.DrawGraph(1, 1, 9, graphScale, fpsHistory, Time.frameCount % fpsHistory.Length, Color.green);
 
         DebugOverlay.Write(30, 0, "Open console (F12) and type: \"showstats\" to toggle graphs");
+        
+        // Show config variables if debug is enabled
+        if (showDebug)
+        {
+            DebugOverlay.Write(1, 3, "FOV: {0}, MouseSens: {1}", fov, mouseSens);
+        }
       
         if (m_ShowStats < 2)
             return;

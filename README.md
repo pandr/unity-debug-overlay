@@ -49,4 +49,46 @@ and it will work like this:
 
 ![Pretty picture](https://user-images.githubusercontent.com/4175246/28582984-d215e5f2-7167-11e7-99ff-e96b2981b9bb.gif)
 
+## Config Variables
+
+The project includes a high-performance config variable system inspired by Quake and Source engines. Config variables can be set from the console and provide O(1) access for use in hot loops.
+
+### Usage
+
+```c#
+// Register config variables (typically in Init())
+int fovId = ConfigVar.RegisterFloat("fov", 70.0f, "Field of view");
+int mouseSensId = ConfigVar.RegisterFloat("mousesens", 1.0f, "Mouse sensitivity");
+int showDebugId = ConfigVar.RegisterBool("showdebug", true, "Show debug information");
+
+// Fast access in hot loops
+float fov = ConfigVar.GetFloat(fovId);
+float mouseSens = ConfigVar.GetFloat(mouseSensId);
+bool showDebug = ConfigVar.GetBool(showDebugId);
+```
+
+### Console Commands
+
+```
+> fov = 90
+fov = 90
+> mousesens = 2.5
+mousesens = 2.5
+> showdebug = false
+showdebug = False
+> cvarlist
+Config Variables:
+  fov = 90
+  mousesens = 2.5
+  showdebug = False
+> demo
+Config Variable Demo:
+Try these commands:
+  fov = 90
+  mousesens = 2.5
+  showdebug = false
+  graphscale = 2.0
+  cvarlist
+```
+
 
