@@ -1,52 +1,50 @@
 # unity-debug-overlay
-A fast and (almost) garbage free debug overlay for Unity. The projects contains two primary components: a debug overlay
-and a console.
+A fast, (almost) garbage-free debug overlay for Unity with three components: a debug overlay, a console, and a CVar system.
 
-## Performance
-Garbage production is minimized by not really using strings a lot and by having convenience functions that mimick string
-formatting (using format strings like `"This: {0}"`) known from C#. Rendering happens through the magic of a few procedural draw calls
-and is quite fast.
+Garbage is minimized by avoiding string allocation — formatting uses C#-style format strings (`"This: {0}"`) backed by a procedural renderer with no mesh allocation.
 
 ## Debug overlay
-The debug overlay is useful for displaying text and graphs that update every frame.
-Like this:
-
-![Pretty picture](https://user-images.githubusercontent.com/4175246/28583020-e34a3a12-7167-11e7-8871-7199f410aa8d.gif)
-
-This can be done with some level of convenience using this code:
+Displays text, graphs, and primitives that update every frame:
 
 ```c#
-    // FPS in top left corner
-    DebugOverlay.Write(1, 0, "FPS:{0,6:###.##}", 1.0f / Time.deltaTime);
+// FPS in top left corner
+DebugOverlay.Write(1, 0, "FPS:{0,6:###.##}", 1.0f / Time.deltaTime);
 
-    // Small graph of FPS below
-    fpsHistory[Time.frameCount % fpsHistory.Length] = 1.0f / Time.deltaTime;
-    DebugOverlay.DrawGraph(1, 1, 9, 1.5f, fpsHistory, Time.frameCount % fpsHistory.Length, Color.green);
+// Line graph of FPS below
+fpsHistory[Time.frameCount % fpsHistory.Length] = 1.0f / Time.deltaTime;
+DebugOverlay.DrawGraph(1, 1, 9, 1.5f, fpsHistory, Time.frameCount % fpsHistory.Length, Color.green);
 ```
 
-Even though it looks like regular string formatting, no garbage will be generated.
+![Debug overlay](https://user-images.githubusercontent.com/4175246/28583020-e34a3a12-7167-11e7-8871-7199f410aa8d.gif)
+
+Additional drawing calls: `DrawHist`, `DrawRect`, `DrawLine`, `DrawQuad`, `DrawTexturedQuad`, `SetColor`, `SetOrigin`. Text supports inline color markup via `^RGB` (e.g. `^F00` for red).
 
 ## Console
-The console is useful for checking logs / output while ingame and also for easily registrering commands
-that can be used to tweak the game behaviour or turn on/off debugging aspects.
-
-You can write
+Toggle with **F12**. Supports command history (up/down), tab completion, and mouse scroll.
 
 ```c#
-    // Register quit command
-    Game.console.AddCommand("quit", CmdQuit, "Quit game");
+Game.console.AddCommand("quit", CmdQuit, "Quit game");
 
-    /* ... */
-
-    void CmdQuit(string[] args)
-    {
-    	Game.console.Write("Goodbye\n");
-        Application.Quit();
-    }
+void CmdQuit(string[] args)
+{
+    Game.console.Write("Goodbye\n");
+    Application.Quit();
+}
 ```
 
-and it will work like this:
+![Console](https://user-images.githubusercontent.com/4175246/28582984-d215e5f2-7167-11e7-99ff-e96b2981b9bb.gif)
 
-![Pretty picture](https://user-images.githubusercontent.com/4175246/28582984-d215e5f2-7167-11e7-99ff-e96b2981b9bb.gif)
+Built-in commands: `help`, `dump` (scene hierarchy), `cvars`, `watch`.
 
+## CVars
+Typed config variables readable and settable from the console at runtime:
 
+```c#
+static CVarFloat showFps = new CVarFloat("showfps", 0, "Show FPS counter");
+
+// In update:
+if (showFps.value > 0)
+    DebugOverlay.Write(1, 0, "FPS:{0,6:###.##}", 1.0f / Time.deltaTime);
+```
+
+In the console: type `showfps` to read, `showfps 1` to set. Use `watch showfps` to display it on the overlay continuously. Types supported: `CVarFloat`, `CVarInt`, `CVarString`.
