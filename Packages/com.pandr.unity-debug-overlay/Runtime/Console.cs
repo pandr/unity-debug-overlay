@@ -1,11 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class Console : IGameSystem
+public class Console
 {
     const int k_BufferSize = 80 * 25 * 1000; // arbitrarily set to 1000 scroll back lines at 80x25
     const int k_InputBufferSize = 512;
@@ -95,18 +94,13 @@ public class Console : IGameSystem
         }
     }
 
-    public void Init()
-    {
-        Init(null);
-        AddCommand("cvars", CmdCvars, "List all config variables");
-        AddCommand("watch", CmdWatch, "Watch/unwatch a cvar on the overlay");
-    }
-
     public void Init(DebugOverlay debugOverlay)
     {
-        m_DebugOverlay = debugOverlay != null ? debugOverlay : DebugOverlay.instance;
+        m_DebugOverlay = debugOverlay;
         Resize(m_DebugOverlay.width, m_DebugOverlay.height);
         Clear();
+        AddCommand("cvars", CmdCvars, "List all config variables");
+        AddCommand("watch", CmdWatch, "Watch/unwatch a cvar on the overlay");
     }
 
     public void Shutdown()

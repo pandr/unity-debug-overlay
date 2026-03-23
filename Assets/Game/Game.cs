@@ -38,7 +38,7 @@ public class Game
         m_DebugOverlay.Init(120, 36);
 
         m_Console = new Console();
-        m_Console.Init();
+        m_Console.Init(m_DebugOverlay);
 
         m_Console.AddCommand("quit", CmdQuit, "Quit game");
 
@@ -77,7 +77,6 @@ public class Game
         m_Stats.TickUpdate();
         m_Console.TickUpdate();
     }
-
 
     public void LateUpdate()
     {

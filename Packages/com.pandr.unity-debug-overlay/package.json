@@ -1,0 +1,10 @@
+{
+  "name": "com.pandr.unity-debug-overlay",
+  "version": "1.0.0",
+  "displayName": "Debug Overlay",
+  "description": "In-game debug overlay with console, commands, and config variables (CVars).",
+  "unity": "2021.3",
+  "dependencies": {
+    "com.unity.inputsystem": "1.0.0"
+  }
+}
